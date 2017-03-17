@@ -52,16 +52,17 @@ using namespace std;
 // to correspond to your network, and adjust the function GetTheNetworkEdges().
 
 // USER CONTROLLED VARIABLES
-const long int Nodes = 34;   // Number of nodes in the network
+const long int Nodes = 330;   // Number of nodes in the network
 const int MAXEDGES = 10000000;  // this is the maximum number of edges
 const int DegreeCorrect = 1; // 0 means don't correct for the degrees, 1 means do correct for the degrees.
 // This changes how the score is computed as in the paper.
-const int KLPerNetwork = 1; // this is the number of KL runs on a network
+const int KLPerNetwork = 100; // this is the number of KL runs on a network
 const int MaxComms = 2;  // the number of communities
 /// removed ReadInOption for directed.
 const int TrueCommsAvailable = 0; // 1 reads them in and includes in printout
 const int InitializationOption = 0; // 0 is random, 1 = ground truth initialization
-const bool Directed = true;
+const bool Directed = false;
+const int SelfTwice = 2; ///Make 2 if you want to count self-edges twice (convention) in the directed case
 
 // BELOW THIS POINT ONLY FILENAMES AND THE NETWORK INPUT CODE SHOULD BE ADJUSTED.
 
@@ -234,7 +235,7 @@ int main()
   }
   for(i=0; i < Nodes; i++)
   BestState[i] = SavedState[i];
-  cout << "Final Score: " << MaxScore << endl;
+  cout << "Final Score: " << ComputeInitialScore() << endl;
   
   PrintResults();
   
@@ -252,13 +253,13 @@ void GetTheNetworkEdges()
      long int i,j;
      ifstream InputFile;
      ifstream InputFile2;
-     string fileName = "zachmulti_sym.txt";
+     string fileName =  "ny139_AMcommute.txt"; //"zachmulti_sym.txt";
      string fileName2 = "polBlogsSymmLargestFComms.txt";
      string lineread;
      char *buffer;
      long int entry1 = 0;
      long int entry2 = 0;
-     float weight = 0; ///weight
+     float weight = 0;
      int counter = 0;
      int counter2 = 0;
      ///int ignore = 0;
@@ -282,7 +283,8 @@ void GetTheNetworkEdges()
      EdgeList[counter][1] = entry2-1;
      Weight[counter] = weight;
 
-     counter = counter+1;
+     counter++;
+     
  
      delete[] buffer;
      }
@@ -364,6 +366,7 @@ void GetTheNetworkEdges()
 
     }
     
+    
     if( Directed )
     {
         for(i=0; i < counter; i++)
@@ -373,7 +376,7 @@ void GetTheNetworkEdges()
             Count[EdgeList[i][1]]++;
             outCount[EdgeList[i][0]]++;
         }
-        
+
         // Now we make space in the adjacency lists
         for(i=0; i < Nodes; i++)
         {
@@ -382,6 +385,8 @@ void GetTheNetworkEdges()
             outAdjList[i] = new long int [outCount[i]];
             outAdjListWeight[i] = new float [outCount[i]];
         }
+        
+        
         
         for(i=0; i < counter; i++)
         {
@@ -502,9 +507,6 @@ void RunKL()
                  // This is essential to enforce so that it will go downhill and not be greedy
                  if(k != CurrentState[ChangeSet[j]])
                  {
-                    /*cout << "Best Edge Matrix" << endl;
-                    cout << BestEdgeMatrix[0][0] << " " << BestEdgeMatrix[0][1] << endl;
-                    cout << BestEdgeMatrix[1][0] << " " << BestEdgeMatrix[1][1] << endl;*/
                     value = ComputeProposal(ChangeSet[j], CurrentState[ChangeSet[j]], k);
                     if(value > ProposalRatio)
                     {
@@ -606,6 +608,7 @@ void Initialize()
         }
         
         sum = 0;
+
         for(i=0; i < Nodes; i++)
         {
             for(j=0; j < LastEmpty[i]; j++)
@@ -613,7 +616,9 @@ void Initialize()
                 neighbor = AdjList[i][j]; ///remember undirected edges are added to adj list in both directions
                 float neighborWeight = AdjListWeight[i][j];
                 
-                //prevent diagonal double-counting
+                /// if best states not the same, we add once to BS[i,j] once to BS[j,i]
+                /// if best states are the same, make sure we don't double-count
+                
                 if (BestState[neighbor] == BestState[i])
                     neighborWeight *= 0.5;
                 
@@ -624,7 +629,7 @@ void Initialize()
         }
     }
 
-
+    
     if ( Directed )
     {
          
@@ -632,6 +637,7 @@ void Initialize()
          {
             BestCommVertices[i] = 0;
             BestCommStubs[i] = 0;
+            BestCommEnds[i] = 0;
             for(j=0; j < MaxComms; j++)
                 BestEdgeMatrix[i][j] = 0;
          }
@@ -648,34 +654,40 @@ void Initialize()
          }
         
          sum = 0;
+        
          for(i=0; i < Nodes; i++)
          {
-
             for(j=0; j < LastEmpty[i]; j++)
             {
                neighbor = AdjList[i][j];
+               
                BestEdgeMatrix[BestState[neighbor]][BestState[i]] += AdjListWeight[i][j];
-               sum += AdjListWeight[i][j];
-               if (i == neighbor)
-                { //self-edges count twice
-                    BestEdgeMatrix[BestState[neighbor]][BestState[i]] += AdjListWeight[i][j];
-                    sum += AdjListWeight[i][j];
-                }
+               sum += AdjListWeight[i][j]; //Note self-edges get counted ONCE because we're only interating over out-edges
+               
+               //try counting self edges twice?
+               if (i == neighbor && SelfTwice == 2) {
+                   BestEdgeMatrix[BestState[neighbor]][BestState[i]] += AdjListWeight[i][j];
+                   sum += AdjListWeight[i][j];
+               }
+                   
+                
+                   
             }
 
          }
+         cout << "The starting best edge matrix encodes: " << Edges << " edges with total weight " << sum << endl;
     }
         
-    cout << "The starting best edge matrix encodes: " << Edges << " edges with total weight " << sum << endl;
+    
     
     for(i=0; i < MaxComms; i++)
     {
-        cout << CurrentCommVertices[i] <<endl;
-        
         for(j=0; j < MaxComms; j++)
         {
-            cout << BestEdgeMatrix[i][j] << " ";
-            ///cout << BestEdgeMatrix[i][j]/sum << " ";
+            if(i==j)
+                cout << BestEdgeMatrix[i][j] << " ";
+            if(i!=j)
+                cout << BestEdgeMatrix[i][j] << " ";
         }
         cout << endl;
     }
@@ -734,7 +746,6 @@ double ComputeInitialScore()
                    else
                        bestval = BestCommVertices[i]*BestCommVertices[j];
                    
-                   cout << "BestEdgeMatrix ij: " << BestEdgeMatrix[i][j] << "." << endl;
                    sum = sum + LogFunction(BestEdgeMatrix[i][j]);
                    if ( bestval > 0 && BestEdgeMatrix[i][j] > 0)
                        sum = sum - BestEdgeMatrix[i][j] * log(bestval);
@@ -827,10 +838,9 @@ double ComputeProposal(int vertex, int from, int destination)
          {
              help1 = double(CurrentCommStubs[from]);
              help2 = double(Degree[vertex]);
-             if(help1 - help2 > tol && CurrentCommVertices[from] > 1)
+             if(CurrentCommVertices[from] > 1)
                  ratiovalue = ratiovalue - (help1-help2)*log(double(CurrentCommVertices[from]-1));
-             if(help1 > tol && CurrentCommVertices[from] > 1)
-                 ratiovalue = ratiovalue + help1*log(double(CurrentCommVertices[from]));
+             ratiovalue = ratiovalue + help1*log(double(CurrentCommVertices[from]));
          }
          
          // now we do from/from
@@ -852,9 +862,8 @@ double ComputeProposal(int vertex, int from, int destination)
          {
          help1 = double(CurrentCommStubs[destination]);
          help2 = double(Degree[vertex]);
-         if(help1 + help2 > tol)
          ratiovalue = ratiovalue - (help1+help2)*log(double(CurrentCommVertices[destination]+1));
-         if(help1 != 0 && CurrentCommVertices[destination] > 0)
+         if( CurrentCommVertices[destination] > 0)
          ratiovalue = ratiovalue + help1*log(double(CurrentCommVertices[destination]));
          }
          
@@ -884,23 +893,20 @@ double ComputeProposal(int vertex, int from, int destination)
             // IFF the comms were not from and destination
             if((NeighborIndex[i] != from) && (NeighborIndex[i] != destination))
             {
-                // do update NOTE: each community mcc' gets updated once if it had edges switch out
-                // which is correct, remembering that mcc' is symmetric (///undirected case) and we only count c < c' here
                 
                 help1 = CurrentEdgeMatrix[NeighborIndex[i]][from];
                 help2 = CurrentEdgeMatrix[NeighborIndex[i]][destination];
                 help3 = NeighborSet[i];
                 
-                ///cout << "help1 - help3: " << help1 - help3 << "." << endl;
                 ratiovalue = ratiovalue + LogFunction(help1-help3) - LogFunction(help1);
                 ratiovalue = ratiovalue + LogFunction(help2+help3) - LogFunction(help2);
             }
             
             if(NeighborIndex[i] == from)
-                fromcount = NeighborSet[i]; //white to white
+                fromcount = NeighborSet[i];
             
             if(NeighborIndex[i] == destination)
-                destcount = NeighborSet[i]; //black to white
+                destcount = NeighborSet[i];
         }
         
         for(i=0; i < outActualDiffComms; i++)
@@ -917,7 +923,6 @@ double ComputeProposal(int vertex, int from, int destination)
                  help2 = CurrentEdgeMatrix[destination][outNeighborIndex[i]];
                  help3 = outNeighborSet[i];
                  
-                 ///cout << "help1 - help3: " << help1 - help3 << "." << endl;
                  ratiovalue = ratiovalue + LogFunction(help1-help3) - LogFunction(help1);
                  ratiovalue = ratiovalue + LogFunction(help2+help3) - LogFunction(help2);
              }
@@ -935,38 +940,20 @@ double ComputeProposal(int vertex, int from, int destination)
          help3 = float(CurrentEdgeMatrix[destination][from]); //total black to white
          help4 = float(outfromcount-destcount); // white to white - black to white
          
-         /*
-         cout << "vertex:      " << vertex << "." << endl;
-         cout << "help1: " << help1 << "." << endl;
-         cout << "help2: " << help2 << "." << endl;
-         cout << "help3: " << help3 << "." << endl;
-         cout << "help4: " << help4 << "." << endl;*/
-         
-         ratiovalue = ratiovalue + LogFunction(help1 + help2 - SelfEdgeCounter) - LogFunction(help1); //w 2 b
-         ratiovalue = ratiovalue + LogFunction(help3 + help4 - SelfEdgeCounter) - LogFunction(help3); //b 2 w
+         ratiovalue = ratiovalue + LogFunction(help1 + help2) - LogFunction(help1); //w 2 b - self-edges already excluded?
+         ratiovalue = ratiovalue + LogFunction(help3 + help4) - LogFunction(help3); //b 2 w
          
          // now we do from/from
          help1 = double(CurrentEdgeMatrix[from][from]);
          help2 = double(SelfEdgeCounter + fromcount + outfromcount);
-         /*
-         cout << "vertex" << vertex << "." << endl;
-         cout << "from" << from << "." << endl;
-         for (i = 0; i < 34 ; i++)
-             cout  << CurrentState[i] << ", " << i << ", " << endl;
+         /*cout << "2. help1 " << help1 << endl;
+          cout << "2. fromcount " << fromcount << endl;
+          cout << "2. outfromcount " << outfromcount << endl;
+          cout <<  "2. SelfEdgeCounter " << SelfEdgeCounter << endl;
+          cout << "2. help1 - help2 " << help1 - help2 << endl;*/
          
-         cout << "HELP1: " << help1 << "." << endl;
-         cout << "HELP2: " << help2 << "." << endl;
-         
-         cout << "+: " << ActualDiffComms << "." << endl;
-         cout << "+: " << outActualDiffComms << "." << endl;
-         cout << "+: " << fromcount << "." << endl;
-         cout << "+: " << outfromcount << "." << endl;
-         cout << "+: " << NeighborSet[from] << "." << endl;
-         cout << "+: " << outNeighborSet[from] << "." << endl;
-  =
-         ///cout << "Press enter to continue: " << endl;
-         ///cin.get();*/
          ratiovalue = ratiovalue + LogFunction(help1 - help2) - LogFunction(help1);
+
          
          // and now dest/dest
          help1 = double(CurrentEdgeMatrix[destination][destination]);
@@ -980,7 +967,7 @@ double ComputeProposal(int vertex, int from, int destination)
             ///in
             help1 = double(CurrentCommEnds[from]);
             help2 = double(Degree[vertex]);
-            ratiovalue = ratiovalue - LogFunction(help1 - help2) + LogFunction(help1); /// current/proposal?
+            ratiovalue = ratiovalue - LogFunction(help1 - help2) + LogFunction(help1); ///
             
             ///out
             help1 = double(CurrentCommStubs[from]);
@@ -1005,34 +992,28 @@ double ComputeProposal(int vertex, int from, int destination)
             ///in
             help1 = double(CurrentCommEnds[from]);
             help2 = double(Degree[vertex]);
-            if(help1 - help2 > tol)
+            if(CurrentCommVertices[from] > 1)
                 ratiovalue = ratiovalue - (help1 - help2) * log(double(CurrentCommVertices[from]-1)); //update
-            if(help1 != 0)
-                ratiovalue = ratiovalue + help1 * log(double(CurrentCommVertices[from]));  //current
+            ratiovalue = ratiovalue + help1 * log(double(CurrentCommVertices[from]));  //current
             
             ///out
             help1 = double(CurrentCommStubs[from]);
             help2 = double(outDegree[vertex]);
-            if(help1 - help2 > tol)
+            if(CurrentCommVertices[from] > 1)
                 ratiovalue = ratiovalue - (help1 - help2) * log(double(CurrentCommVertices[from]-1));
-            if(help1 > tol)
-                ratiovalue = ratiovalue + help1 * log(double(CurrentCommVertices[from]));
+            ratiovalue = ratiovalue + help1 * log(double(CurrentCommVertices[from]));
         
             ///in
             help1 = double(CurrentCommEnds[destination]);
             help2 = double(Degree[vertex]);
-            if(help1 - help2 > tol)
-                ratiovalue = ratiovalue - (help1 + help2) * log(double(CurrentCommVertices[destination]+1));
-            if(help1 > tol)
-                ratiovalue = ratiovalue + help1 * log(double(CurrentCommVertices[destination]));
+            ratiovalue = ratiovalue - (help1 + help2) * log(double(CurrentCommVertices[destination]+1));
+            ratiovalue = ratiovalue + help1 * log(double(CurrentCommVertices[destination]));
             
             ///out
             help1 = double(CurrentCommStubs[destination]);
             help2 = double(outDegree[vertex]);
-            if(help1 - help2 > tol)
-                ratiovalue = ratiovalue - (help1 + help2) * log(double(CurrentCommVertices[destination]+1));
-            if(help1 != 0)
-                ratiovalue = ratiovalue + help1 * log(double(CurrentCommVertices[destination]));
+            ratiovalue = ratiovalue - (help1 + help2) * log(double(CurrentCommVertices[destination]+1));
+            ratiovalue = ratiovalue + help1 * log(double(CurrentCommVertices[destination]));
         }
         
 
@@ -1107,9 +1088,7 @@ void ComputeNeighborSet(int vertex, int option)
             outNeighborSet[i] = 0;
         }
         
-        // NOTE SINCE A SELF-EDGE SHOWS UP TWICE IN THE ADJLIST THIS DOUBLE
-        // COUNTS THESE EDGES, WE RECORD THE NUMBER OF TIMES THIS HAPPENS
-        // IN A SEPARATE VARIABLE AND THEN DIVIDE BY TWO
+        
         for(i=0; i < Count[vertex]; i++)
         {
             neighbor = AdjList[vertex][i];
@@ -1122,7 +1101,7 @@ void ComputeNeighborSet(int vertex, int option)
                     TempNeighborSet[BestState[neighbor]] += AdjListWeight[vertex][i];
             }
             if(neighbor == vertex)
-                SelfEdgeCounter += 2.0 * AdjListWeight[vertex][i];
+                SelfEdgeCounter += SelfTwice * AdjListWeight[vertex][i];  /// count self-edges ONCE unless selftwice is 2
         }
         
         for(i=0; i < outCount[vertex]; i++)
@@ -1297,10 +1276,10 @@ void UpdateMatrices(int vertex, int option, int from, int destination)
             
             }
             
-            CurrentEdgeMatrix[from][from] -= (fromcount + outfromcount); //removes self edges once for in once for out
-            CurrentEdgeMatrix[destination][destination] += (destcount + outdestcount + 2*SelfEdgeCounter);
-            CurrentEdgeMatrix[destination][from] += (outfromcount - SelfEdgeCounter - destcount);
-            CurrentEdgeMatrix[from][destination] += (fromcount - SelfEdgeCounter - outdestcount);
+            CurrentEdgeMatrix[from][from] -= (fromcount + outfromcount + SelfEdgeCounter);
+            CurrentEdgeMatrix[destination][destination] += (destcount + outdestcount + SelfEdgeCounter);
+            CurrentEdgeMatrix[destination][from] += (outfromcount - destcount); //reminder: self-edges NOT included with NeighborSet
+            CurrentEdgeMatrix[from][destination] += (fromcount - outdestcount);
             
         }
         
@@ -1352,10 +1331,10 @@ void UpdateMatrices(int vertex, int option, int from, int destination)
             }
             
             //already dealt with self edges
-            BestEdgeMatrix[from][from] -= (fromcount + outfromcount); //removes self edges once for in once for out
-            BestEdgeMatrix[destination][destination] += (destcount + outdestcount + 2*SelfEdgeCounter);
-            BestEdgeMatrix[destination][from] += (outfromcount - SelfEdgeCounter - destcount);
-            BestEdgeMatrix[from][destination] += (fromcount - SelfEdgeCounter - outdestcount);
+            BestEdgeMatrix[from][from] -= (fromcount + outfromcount + SelfEdgeCounter);
+            BestEdgeMatrix[destination][destination] += (destcount + outdestcount + SelfEdgeCounter);
+            BestEdgeMatrix[destination][from] += (outfromcount - destcount);
+            BestEdgeMatrix[from][destination] += (fromcount - outdestcount);
             
         }
         
@@ -1429,11 +1408,17 @@ void PrintResults() /// come back if necessary
      
      myfile.close();
      
-     if(DegreeCorrect == 0)
-     myfile.open("FoundComms0.tsv");
+     if( (DegreeCorrect == 0) & !Directed)
+     myfile.open("FoundComms00.tsv");
+    
+     if( (DegreeCorrect == 0) & Directed)
+     myfile.open("FoundComms01.tsv");
+    
+     if( (DegreeCorrect == 1) & !Directed)
+     myfile.open("FoundComms10.tsv");
      
-     if(DegreeCorrect == 1)
-     myfile.open("FoundComms1.tsv");
+     if( (DegreeCorrect == 1) & Directed)
+     myfile.open("FoundComms11.tsv");
      
      for(i=0; i < Nodes; i++)
      {
