@@ -3,8 +3,11 @@ Rcpp package for stochastic block modeling, allowing for degree corrected (or no
 
 To install:
 In terminal, from folder containing sbm
+
 R CMD build sbm
+
 R CMD check sbm
+
 R CMD install sbm
 
 This package is a work in progress and any suggestions for improvements or found bugs are appreciated. 
