@@ -1,14 +1,11 @@
-/// TO DO: 1) allow read in from .csv
-///        2) Allow setting args (nodes, filenames, maxedges, etc) from command line
-///        3) only initialize directed objects if directed?
-///        4) Rcpp package -  currently from R do something like el = as.edgelist(zach); add weights; write.table(el, file = "zach.txt", sep = "\t", col.names = FALSE, row.names = FALSE)
-///        5) Add twice diag option for undirected?
-///        6) Fix the code for reading in initial communities
+/// TO DO: 1) only initialize directed objects if network is directed?
+///        2) Add twice diag option for undirected?
+///        3) Fix the code for reading in initial communities (on the R and cpp ends)
 
 
 /// Jane Carlen
 ///
-/// March, 9 2017
+/// March, 18 2017
 ///
 /// DIRECTED and undirected, degree-corrected stochastic block model implementation
 ///
@@ -16,8 +13,7 @@
 ///
 /// Real-valued, non-neg weights accepted via weights arg (rather than repeated edges in list)
 ///
-/// Graph must be read in from .txt file (i.e. only ReadInOption = 1 in Karrer code)
-
+/// This version is similar to KLOptimization_directed, but connects to R via RCPP
 
 /// Brian Karrer comments indicated by //, a few have been slightly edited.
 /// Jane Carlen's comments indicated by ///
@@ -68,6 +64,8 @@ const int TrueCommsAvailable = 0; // 1 reads them in and includes in printout
 const int InitializationOption = 0; // 0 is random, 1 = ground truth initialization
 const bool Directed = false;
 const int SelfTwice = 1; ///Make 2 if you want to count self-edges twice (convention) in the directed case
+string fileName =   "ny139_AMcommute.txt"; //"zachmulti.txt";
+string fileName2 = "polBlogsSymmLargestFComms.txt";
 
 // BELOW THIS POINT ONLY FILENAMES AND THE NETWORK INPUT CODE SHOULD BE ADJUSTED.
 
@@ -160,8 +158,9 @@ double JointEntropy();
 //*********************** MAIN PROGRAM ***********************************************************************
 
 // Main program
-  
-int main()
+
+// [[Rcpp::export]]
+List sbm()
 {
   int i, j, k;
   
@@ -197,9 +196,13 @@ int main()
   cout << "Press enter to continue: " << endl;
   cin.get();
   // REPLACERNG (end)
- 
+
   GetTheNetworkEdges();
 
+  return List::create(Named("Edgelist") = EdgeList);
+}
+
+  /*
   HighestScore = -numeric_limits<double>::max( );
   VIValue = 0;  
   NMIValue = 0;           
@@ -251,15 +254,15 @@ int main()
   cin.get();
   
   return 0;
+  */
 }
 
+// [[Rcpp::export]]
 void GetTheNetworkEdges()
 {
      long int i,j;
      ifstream InputFile;
      ifstream InputFile2;
-     string fileName =   "ny139_AMcommute.txt"; ///"zachmulti.txt";
-     string fileName2 = "polBlogsSymmLargestFComms.txt";
      string lineread;
      char *buffer;
      long int entry1 = 0;
@@ -407,7 +410,7 @@ void GetTheNetworkEdges()
         }
     }
      
-     cout << "Read in edges = " << Edges << endl;
+     ///cout << "Read in edges = " << Edges << endl;
 
      return;
 }
@@ -594,7 +597,7 @@ void Initialize()
     if ( !Directed )
     {
         
-        for(i=0; i < MaxComms; i++) ///initialize
+        for(i=0; i < MaxComms; i++) //initialize vars with 0's
         {
             BestCommVertices[i] = 0;
             BestCommStubs[i] = 0;
@@ -636,8 +639,8 @@ void Initialize()
     
     if ( Directed )
     {
-        
-         for(i=0; i < MaxComms; i++) /// initialize
+         
+         for(i=0; i < MaxComms; i++) //initialize vars with 0's
          {
             BestCommVertices[i] = 0;
             BestCommStubs[i] = 0;
@@ -666,9 +669,9 @@ void Initialize()
                neighbor = AdjList[i][j];
                
                BestEdgeMatrix[BestState[neighbor]][BestState[i]] += AdjListWeight[i][j];
-               sum += AdjListWeight[i][j]; /// Note self-edges get counted ONCE because we're only interating over out-edges
+               sum += AdjListWeight[i][j]; //Note self-edges get counted ONCE because we're only interating over out-edges
                
-               /// count self edges twice?
+               //try counting self edges twice?
                if (i == neighbor && SelfTwice == 2) {
                    BestEdgeMatrix[BestState[neighbor]][BestState[i]] += AdjListWeight[i][j];
                    sum += AdjListWeight[i][j];
@@ -682,8 +685,6 @@ void Initialize()
         
     }
     
-    /// removed this bc it's too much printing for large numbers of communities
-    /// also, need to double-check that sum is counting right so everything adds to zero
     /*
     cout << "The starting best edge matrix encodes: " << Edges << " which may be weighted " << endl;
     
@@ -749,7 +750,7 @@ double ComputeInitialScore()
            {
                for(j = 0; j < MaxComms; j++)
                {
-                   double bestval;
+                   double bestval; //are we using stubs/ends or vertices?
                    if (DegreeCorrect == 1)
                        bestval = BestCommStubs[i]*BestCommEnds[j];
                    else
@@ -858,6 +859,7 @@ double ComputeProposal(int vertex, int from, int destination)
          ratiovalue = ratiovalue + .5*LogFunction(help1 - help2) - .5*LogFunction(help1);
          
          // now we add in the terms corresponding to dest
+         
          if(DegreeCorrect == 1)
          {
          help1 = double(CurrentCommStubs[destination]);
@@ -943,13 +945,13 @@ double ComputeProposal(int vertex, int from, int destination)
          }
          
          // now we add in the term corresponding to from / dest
-         help1 = float(CurrentEdgeMatrix[from][destination]); /// total white to black
-         help2 = float(fromcount-outdestcount); /// white to white - white to black
-         help3 = float(CurrentEdgeMatrix[destination][from]); /// total black to white
-         help4 = float(outfromcount-destcount); /// white to white - black to white
+         help1 = float(CurrentEdgeMatrix[from][destination]); //total white to black
+         help2 = float(fromcount-outdestcount); // white to white - white to black
+         help3 = float(CurrentEdgeMatrix[destination][from]); //total black to white
+         help4 = float(outfromcount-destcount); // white to white - black to white
          
-         ratiovalue = ratiovalue + LogFunction(help1 + help2) - LogFunction(help1); /// w 2 b - self-edges already excluded
-         ratiovalue = ratiovalue + LogFunction(help3 + help4) - LogFunction(help3); /// b 2 w
+         ratiovalue = ratiovalue + LogFunction(help1 + help2) - LogFunction(help1); //w 2 b - self-edges already excluded?
+         ratiovalue = ratiovalue + LogFunction(help3 + help4) - LogFunction(help3); //b 2 w
          
          // now we do from/from
          help1 = double(CurrentEdgeMatrix[from][from]);
@@ -975,7 +977,7 @@ double ComputeProposal(int vertex, int from, int destination)
             ///in
             help1 = double(CurrentCommEnds[from]);
             help2 = double(Degree[vertex]);
-            ratiovalue = ratiovalue - LogFunction(help1 - help2) + LogFunction(help1);
+            ratiovalue = ratiovalue - LogFunction(help1 - help2) + LogFunction(help1); ///
             
             ///out
             help1 = double(CurrentCommStubs[from]);
@@ -1001,8 +1003,8 @@ double ComputeProposal(int vertex, int from, int destination)
             help1 = double(CurrentCommEnds[from]);
             help2 = double(Degree[vertex]);
             if(CurrentCommVertices[from] > 1)
-                ratiovalue = ratiovalue - (help1 - help2) * log(double(CurrentCommVertices[from]-1)); ///update
-            ratiovalue = ratiovalue + help1 * log(double(CurrentCommVertices[from]));  ///current
+                ratiovalue = ratiovalue - (help1 - help2) * log(double(CurrentCommVertices[from]-1)); //update
+            ratiovalue = ratiovalue + help1 * log(double(CurrentCommVertices[from]));  //current
             
             ///out
             help1 = double(CurrentCommStubs[from]);
@@ -1065,7 +1067,7 @@ void ComputeNeighborSet(int vertex, int option)
             SelfEdgeCounter += AdjListWeight[vertex][i];
          }
          
-         SelfEdgeCounter = SelfEdgeCounter/2; /// ONLY if undirected
+         SelfEdgeCounter = SelfEdgeCounter/2; //ONLY if undirected
          
          ActualDiffComms = 0;
          for(i=0; i < MaxComms; i++)
@@ -1103,7 +1105,7 @@ void ComputeNeighborSet(int vertex, int option)
             if(neighbor != vertex)
             {
                 if(option == 0)
-                    TempNeighborSet[CurrentState[neighbor]] += AdjListWeight[vertex][i];  /// the first entry lists the comm and the second entry lists the number of edges to that comm
+                    TempNeighborSet[CurrentState[neighbor]] += AdjListWeight[vertex][i];  // the first entry lists the comm and the second entry lists the number of edges to that comm
                 
                 if(option == 1)
                     TempNeighborSet[BestState[neighbor]] += AdjListWeight[vertex][i];
@@ -1252,6 +1254,8 @@ void UpdateMatrices(int vertex, int option, int from, int destination)
             {
                 if((NeighborIndex[i] != from) && (NeighborIndex[i] != destination))
                 {
+                    // do update NOTE: each community mcc' gets updated once if it had edges switch out
+                    // which is correct, remembering that mcc' is symmetric and we only count c < c' here
                     CurrentEdgeMatrix[NeighborIndex[i]][from] -= NeighborSet[i];
                     CurrentEdgeMatrix[NeighborIndex[i]][destination] += NeighborSet[i];
                 }
@@ -1268,6 +1272,8 @@ void UpdateMatrices(int vertex, int option, int from, int destination)
             {
                 if((outNeighborIndex[i] != from) && (outNeighborIndex[i] != destination))
                 {
+                    // do update NOTE: each community mcc' gets updated once if it had edges switch out
+                    // which is correct, remembering that mcc' is symmetric and we only count c < c' here
                     CurrentEdgeMatrix[from][outNeighborIndex[i]] -= outNeighborSet[i];
                     CurrentEdgeMatrix[destination][outNeighborIndex[i]] += outNeighborSet[i];
                 }
@@ -1282,7 +1288,7 @@ void UpdateMatrices(int vertex, int option, int from, int destination)
             
             CurrentEdgeMatrix[from][from] -= (fromcount + outfromcount + SelfEdgeCounter);
             CurrentEdgeMatrix[destination][destination] += (destcount + outdestcount + SelfEdgeCounter);
-            CurrentEdgeMatrix[destination][from] += (outfromcount - destcount); /// reminder: self-edges NOT included with NeighborSet
+            CurrentEdgeMatrix[destination][from] += (outfromcount - destcount); //reminder: self-edges NOT included with NeighborSet
             CurrentEdgeMatrix[from][destination] += (fromcount - outdestcount);
             
         }
@@ -1302,6 +1308,8 @@ void UpdateMatrices(int vertex, int option, int from, int destination)
             {
                 if((NeighborIndex[i] != from) && (NeighborIndex[i] != destination))
                 {
+                    // do update NOTE: each community mcc' gets updated once if it had edges switch out
+                    // which is correct, remembering that mcc' is symmetric and we only count c < c' here
                     BestEdgeMatrix[NeighborIndex[i]][from] -= NeighborSet[i];
                     BestEdgeMatrix[NeighborIndex[i]][destination] += NeighborSet[i];
                 }
@@ -1318,6 +1326,8 @@ void UpdateMatrices(int vertex, int option, int from, int destination)
             {
                 if((outNeighborIndex[i] != from) && (outNeighborIndex[i] != destination))
                 {
+                    // do update NOTE: each community mcc' gets updated once if it had edges switch out
+                    // which is correct, remembering that mcc' is symmetric and we only count c < c' here
                     BestEdgeMatrix[from][outNeighborIndex[i]] -= outNeighborSet[i];
                     BestEdgeMatrix[destination][outNeighborIndex[i]] += outNeighborSet[i];
                 }
@@ -1330,7 +1340,7 @@ void UpdateMatrices(int vertex, int option, int from, int destination)
                 
             }
             
-            /// already dealt with self edges
+            //already dealt with self edges
             BestEdgeMatrix[from][from] -= (fromcount + outfromcount + SelfEdgeCounter);
             BestEdgeMatrix[destination][destination] += (destcount + outdestcount + SelfEdgeCounter);
             BestEdgeMatrix[destination][from] += (outfromcount - destcount);
