@@ -90,7 +90,7 @@ std::vector<double> BestEdgeMatrix;
 std::vector<double> CurrentEdgeMatrix;
 
 int Nodes, MaxComms, KLPerNetwork, ActualDiffComms, outActualDiffComms, DegreeCorrect;
-int MaxScore = 0;
+double MaxScore = 0;
 bool Directed;
 double SelfEdgeCounter; // records the *weight* of self-edges (not doubled) so they can be counted correctly.
 
@@ -300,7 +300,8 @@ List sbmFit(const IntegerMatrix & edgelist, const int maxComms, const int degree
         BestState[i] = SavedState[i];
     
     return List::create(Rcpp::Named("FoundComms") = BestState,
-                        Rcpp::Named("EdgeMatrix") = BestEdgeMatrix);
+                        Rcpp::Named("EdgeMatrix") = BestEdgeMatrix,
+                        Rcpp::Named("HighestScore") = HighestScore);
 
  }
 
@@ -329,6 +330,7 @@ void RunKL(IntegerMatrix AdjList, NumericMatrix AdjListWeight, IntegerMatrix out
     
     while(MaxScore >= prevMaxScore + tolerance)
     {
+        Rcout << "MAX SCORE IS: " << MaxScore << std::endl;
         // we start with everything equal to the best values
         CurrentScore = MaxScore;
         prevMaxScore = MaxScore;
@@ -386,6 +388,7 @@ void RunKL(IntegerMatrix AdjList, NumericMatrix AdjListWeight, IntegerMatrix out
                         {
                             Priority = k;
                             ProposalRatio = value;
+
                         }
                     }
                 }
@@ -475,7 +478,7 @@ void Initialize(IntegerMatrix AdjList, NumericMatrix AdjListWeight)
        
         for(i=0; i < Nodes; i++)
         {
-            BestState[i] = 1;//randComms[i];
+            BestState[i] = randComms[i];
             /*if(InitializationOption == 1)
                 BestState[i] = TrueState[i];*/
             BestCommVertices[BestState[i]]++;
@@ -577,7 +580,7 @@ double ComputeInitialScore()
             if(DegreeCorrect == 0)
             {
                 if(BestCommVertices[i] != 0)
-                    sum = sum - double(BestCommStubs[i])*log(BestCommVertices[i]);
+                    sum = sum - (BestCommStubs[i]) * log(BestCommVertices[i]);
             }
             
             for(j=i; j < MaxComms; j++)
@@ -616,7 +619,9 @@ double ComputeInitialScore()
         
     }
     
+    Rcout << "sum" << sum << std::endl;
     return sum;
+    
     
 }
 
@@ -777,8 +782,8 @@ double ComputeProposal(int vertex, int from, int destination)
      // at the end we put all degree zeroes into their own group
      if(DegreeCorrect == 1)
      {
-     if(Degree[vertex] == 0)
-     return 0;
+         if(Degree[vertex] == 0)
+         return 0;
      }
      
      // we first add up all the cross-terms (between communities that are not from / destination)

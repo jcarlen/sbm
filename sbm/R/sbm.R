@@ -41,7 +41,7 @@ sbm <- function(edgelist, maxComms = 2, degreeCorrect = 0, directed = FALSE, klP
     attr(Results, "degreeCorrect") <- degreeCorrect == 1
     attr(Results, "directed") <- directed
     attr(Results, "klPerNetwork") <- klPerNetwork
-    attr(Results, "weighted") <- weighted
+    attr(Results, "weights") <- weighted
     
     Results
 }
