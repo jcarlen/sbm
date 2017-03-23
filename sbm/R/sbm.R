@@ -3,15 +3,18 @@
 ## License? (You should have received a copy of the GNU General Public License
 ## along with RcppExamples.  If not, see <http://www.gnu.org/licenses/>.)
 
+## To do: Check that seed can be set for reproducibility
+
 #' @KLPerNetwork this is the number of KL runs on a network
 
 sbm <- function(edgelist, maxComms = 2, degreeCorrect = 0, directed = FALSE, klPerNetwork = 50, seedComms = NULL, seed = NULL)
 
 {
-    
+    #Argument Checks
     if (is.null(dim(edgelist)) || ncol(edgelist) < 2) {
         stop("edgelist must have at least two columns, three if weights are supplied")
     }
+    
     
     if (ncol(edgelist) == 3) {
         weights = edgelist[,3]
@@ -20,6 +23,11 @@ sbm <- function(edgelist, maxComms = 2, degreeCorrect = 0, directed = FALSE, klP
     
     if (ncol(edgelist ==2)) {
         weights = rep(1, nrow(edgelist))
+    }
+ 
+    if (directed == 0 || directed == 1) {directed = as.logical(directed)}
+    if (!is.logical(directed)) {
+        stop("Directed should be FALSE or TRUE (0 or 1 OK)")
     }
  
     #seed?
