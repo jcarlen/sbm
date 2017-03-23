@@ -1,6 +1,6 @@
-/// TO DO: 1) only initialize directed objects if network is directed?
-///        2) Add twice diag option for undirected? Move to R side?
-///        3) Fix the code for reading in given initial communities (on the R and cpp ends)
+/// TO DO: 1) Add twice diag option for undirected? Move to R side?
+///        2) Fix the code for reading in given initial communities (on the R and cpp ends)
+///        3) Change double back to float? Does it make a difference?
 
 /// CHANGES: 1) Edge matrices are vectors (get same behavior using row and column indexing) so they can be declared and then size changed.
 ///          2) Use Rcpp for random community generation, no rng dependence
@@ -111,8 +111,7 @@ IntegerVector randomComms(int Nodes, int MaxComms); // generates random commmuni
 
 // [[Rcpp::export]]
 
-List sbmFit(const IntegerMatrix & edgelist, const int maxComms, const int degreeCorrect, const bool directed, const int klPerNetwork, const NumericVector weights) {//,
-            //const IntegerVector seedComms)
+List sbmFit(const IntegerMatrix & edgelist, const int maxComms, const int degreeCorrect, const bool directed, const int klPerNetwork, const NumericVector weights) {  //, const IntegerVector seedComms)
 
     int i, j, k;
     
@@ -130,19 +129,18 @@ List sbmFit(const IntegerMatrix & edgelist, const int maxComms, const int degree
     MaxComms = maxComms;
     DegreeCorrect = degreeCorrect;
     Directed = directed;
-    KLPerNetwork = klPerNetwork; //int KLPerNetwork = KLPerNetwork;
+    KLPerNetwork = klPerNetwork;
     
     /// Make space in Global Vars
-    
-    Degree.assign(Nodes, 0.0);  // Degree of nodes in the network or in Degree if directed
-    Count.assign(Nodes, 0);  // Degree of nodes in the network or in Degree if directed
-    LastEmpty.assign(Nodes, 0);
-    
     CurrentState.assign(Nodes, 0);
     BestState.assign(Nodes, 0);
     ChangeSet.assign(Nodes, 0);
     UpdateIndex.assign(Nodes, 0);
     TrueState.assign(Nodes, 0); // This records the true communities if they exist read in from the file
+    
+    Degree.assign(Nodes, 0.0);  // Degree of nodes in the network or in Degree if directed
+    Count.assign(Nodes, 0);  // Degree of nodes in the network or in Degree if directed
+    LastEmpty.assign(Nodes, 0);
     
     BestCommVertices.assign(MaxComms, 0); //[MaxComms]
     BestCommStubs.assign(MaxComms, 0.0); //if directed, keeps tally of edges originating in a class
@@ -170,11 +168,13 @@ List sbmFit(const IntegerMatrix & edgelist, const int maxComms, const int degree
             
         }
     }
+ 
+    int outmaxCount = 1; //have to set a default for directed.
     
     if (Directed)
     {
         
-        //Directed-only Initializations
+        // Directed-only Initializations
         outDegree.assign(Nodes, 0.0);
         outCount.assign(Nodes, 0);
         outLastEmpty.assign(Nodes, 0);
@@ -194,26 +194,26 @@ List sbmFit(const IntegerMatrix & edgelist, const int maxComms, const int degree
             Count[edgelist(i, 1)]++;
             outCount[edgelist(i, 0)]++;
         }
+        
+        outmaxCount = *std::max_element(outCount.begin(), outCount.end());
     }
 
-    
-    //Now we turn this into an AdjList matrix (slightly less efficiently than cpp-only implementation)
-    
-    //For both undirected and directed:
+    // Create big enough adjlist matrices (less efficient than dynamic mem cpp-only implementation, but seems necessary)
+    // keep at this scope so it's set correctly
+    // undirected & directed
     int maxCount = *std::max_element(Count.begin(), Count.end());
     IntegerMatrix AdjList(Nodes, maxCount);
     NumericMatrix AdjListWeight(Nodes, maxCount);
-    
-    //keep at this scope so it's set correctly
-    int outmaxCount = *std::max_element(outCount.begin(), outCount.end());
-    IntegerMatrix outAdjList(Nodes, maxCount);
-    NumericMatrix outAdjListWeight(Nodes, maxCount);
+    // directed only
+    IntegerMatrix outAdjList(Nodes, outmaxCount);
+    NumericMatrix outAdjListWeight(Nodes, outmaxCount);
     
     //Fill in adj matrices
     if (!Directed)
     {
 
-        for(i=0; i < counter; i++)         {
+        for(i=0; i < counter; i++)
+        {
             
             AdjList(edgelist(i, 0), LastEmpty[edgelist(i, 0)]) = edgelist(i, 1);
             AdjListWeight(edgelist(i, 0), LastEmpty[edgelist(i, 0)]) = weights[i];
@@ -234,39 +234,40 @@ List sbmFit(const IntegerMatrix & edgelist, const int maxComms, const int degree
             
             AdjList(edgelist(i, 1), LastEmpty[edgelist(i, 1)]) = edgelist(i, 0);
             AdjListWeight(edgelist(i, 1), LastEmpty[edgelist(i, 1)]) = weights[i];
-            LastEmpty[edgelist(i, 1)]++;
+            LastEmpty[edgelist(i, 1)]+=1;
             
             outAdjList(edgelist(i, 0), outLastEmpty[edgelist(i, 0)]) = edgelist(i, 1);
             outAdjListWeight(edgelist(i, 0), outLastEmpty[edgelist(i, 0)]) = weights[i];
-            outLastEmpty[edgelist(i, 0)]++;
+            
+            outLastEmpty[edgelist(i, 0)]+=1;
         }
         
     }
 
     double HighestScore = -std::numeric_limits<double>::max( );
-    double VIValue = 0;
-    double NMIValue = 0;
+    /*double VIValue = 0;
+    double NMIValue = 0;*/
     
     // For reporting best state
-    int SavedState[Nodes];
-    int SavedCommVertices[MaxComms];
-    double SavedCommStubs[MaxComms];
-    double SavedCommEnds[MaxComms];
-    std::vector<double> SavedEdgeMatrix(MaxComms*MaxComms);
+    std::vector<int> SavedState(Nodes, 0);
+    std::vector<int> SavedCommVertices(MaxComms, 0);
+    std::vector<double> SavedCommStubs(MaxComms, 0.0);
+    std::vector<double> SavedCommEnds(MaxComms, 0.0);
+    std::vector<double> SavedEdgeMatrix(MaxComms*MaxComms, 0.0);
     
     for(j=0; j < KLPerNetwork; j++)
     {
         
-        Rcout << "KL" << j << std::endl;
         RunKL(AdjList, AdjListWeight, outAdjList, outAdjListWeight);
+
         if(MaxScore >= HighestScore)
         {
             HighestScore = MaxScore;
             /*if(TrueCommsAvailable == 1)
-            {
+             {
                 VIValue = ComputeVI();
                 NMIValue = ComputeNMI();
-            }*/
+             }*/
             for(i=0; i < MaxComms; i++)
             {
                 SavedCommVertices[i] = BestCommVertices[i];
@@ -275,11 +276,11 @@ List sbmFit(const IntegerMatrix & edgelist, const int maxComms, const int degree
                     for(k=0; k < MaxComms; k++)
                         SavedEdgeMatrix[i*MaxComms+k] = BestEdgeMatrix[i*MaxComms+k];
             }
-            for(i=0; i < Nodes; i++)
-                SavedState[i] = BestState[i];
+             for(i=0; i < Nodes; i++)
+                 SavedState[i] = BestState[i];
          }
     }
-
+    
     // because PrintResults are written for best values we copy them
     // back over from the saved values which are the best ones.
     for(i=0; i < MaxComms; i++)
@@ -290,12 +291,12 @@ List sbmFit(const IntegerMatrix & edgelist, const int maxComms, const int degree
       for(k=0; k < MaxComms; k++)
           BestEdgeMatrix[i*MaxComms+k] = SavedEdgeMatrix[i*MaxComms+k];
     }
+    
     for(i=0; i < Nodes; i++)
-    BestState[i] = SavedState[i];
- 
+        BestState[i] = SavedState[i];
     
     return List::create(Rcpp::Named("FoundComms") = BestState,
-                        Rcpp::Named("EdgeMatrix") = BestEdgeMatrix); // Rcpp::Named("seedComms") = seedComms)
+                        Rcpp::Named("EdgeMatrix") = BestEdgeMatrix);
 
  }
 
@@ -395,6 +396,7 @@ void RunKL(IntegerMatrix AdjList, NumericMatrix AdjListWeight, IntegerMatrix out
             }
             // now we move it, first recording the current neighbors so that
             // we can update the matrices properly
+            
             ComputeNeighborSet(ChangeSet[MaxVertex], 0, AdjList, AdjListWeight, outAdjList, outAdjListWeight);
             // This updates the matrices to represent the vertices new state
             UpdateMatrices(ChangeSet[MaxVertex], 0, CurrentState[ChangeSet[MaxVertex]], MaxPriority);
@@ -496,9 +498,8 @@ void Initialize(IntegerMatrix AdjList, NumericMatrix AdjListWeight)
             }
         }
     }
-
+   
     
-
     if ( Directed )
     {
         for(i=0; i < MaxComms; i++) /// initialize
@@ -545,8 +546,8 @@ void Initialize(IntegerMatrix AdjList, NumericMatrix AdjListWeight)
         }
     }
     
-    /// removed printing whole matrix here bc it's too much printing for large numbers of communities
-    /// also, need to double-check that sum is counting right so everything adds to zero
+    /// removed printing whole matrix here bc it's too much for lots of communities
+    /// also, need to double-check that sum is correct so everything adds to one
     
      return;
     
@@ -586,8 +587,6 @@ double ComputeInitialScore()
             
         }
         
-        return sum;
-        
     }
     
     if ( Directed )
@@ -611,8 +610,9 @@ double ComputeInitialScore()
             
         }
         
-        return sum;
     }
+    
+    return sum;
     
 }
 
@@ -626,7 +626,7 @@ double ComputeInitialScore()
 
 void ComputeNeighborSet(int vertex, int option, IntegerMatrix AdjList, NumericMatrix AdjListWeight, IntegerMatrix outAdjList, NumericMatrix outAdjListWeight)
 {
-    int i,j;
+    int i;
     int neighbor;
     double tol = std::numeric_limits<double>::epsilon();
     
@@ -750,7 +750,7 @@ void ComputeNeighborSet(int vertex, int option, IntegerMatrix AdjList, NumericMa
 
 double ComputeProposal(int vertex, int from, int destination)
 {
-    int i, j, k;
+    int i;
     double ratiovalue = 0;
     float fromcount = 0;
     float destcount = 0;
@@ -1001,7 +1001,7 @@ double ComputeProposal(int vertex, int from, int destination)
 
 void UpdateMatrices(int vertex, int option, int from, int destination)
 {
-    int i,j;
+    int i;
     float fromcount = 0;
     float destcount = 0;
     float outfromcount = 0;

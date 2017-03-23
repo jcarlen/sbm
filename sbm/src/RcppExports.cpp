@@ -5,16 +5,6 @@
 
 using namespace Rcpp;
 
-// rcpp_hello_world
-List rcpp_hello_world();
-RcppExport SEXP sbm_rcpp_hello_world() {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    rcpp_result_gen = Rcpp::wrap(rcpp_hello_world());
-    return rcpp_result_gen;
-END_RCPP
-}
 // sbmFit
 List sbmFit(const IntegerMatrix& edgelist, const int maxComms, const int degreeCorrect, const bool directed, const int klPerNetwork, const NumericVector weights);
 RcppExport SEXP sbm_sbmFit(SEXP edgelistSEXP, SEXP maxCommsSEXP, SEXP degreeCorrectSEXP, SEXP directedSEXP, SEXP klPerNetworkSEXP, SEXP weightsSEXP) {
