@@ -259,7 +259,8 @@ List sbmFit(const IntegerMatrix & edgelist, const int maxComms, const int degree
     {
         
         RunKL(AdjList, AdjListWeight, outAdjList, outAdjListWeight);
-
+        Rcout << "KL " << j + 1 << std::endl;
+        
         if(MaxScore >= HighestScore)
         {
             HighestScore = MaxScore;
@@ -268,9 +269,12 @@ List sbmFit(const IntegerMatrix & edgelist, const int maxComms, const int degree
                 VIValue = ComputeVI();
                 NMIValue = ComputeNMI();
              }*/
+            
             for(i=0; i < MaxComms; i++)
+                
             {
                 SavedCommVertices[i] = BestCommVertices[i];
+                //Rcout << BestCommVertices[i] << ", ";
                 SavedCommStubs[i] = BestCommStubs[i];
                 if (Directed) SavedCommEnds[i] = BestCommEnds[i];
                     for(k=0; k < MaxComms; k++)

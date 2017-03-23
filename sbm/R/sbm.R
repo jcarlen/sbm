@@ -15,14 +15,15 @@ sbm <- function(edgelist, maxComms = 2, degreeCorrect = 0, directed = FALSE, klP
         stop("edgelist must have at least two columns, three if weights are supplied")
     }
     
+    if (ncol(edgelist) == 2) {
+        weights = rep(1, nrow(edgelist))
+        weighted = FALSE
+    }
     
     if (ncol(edgelist) == 3) {
         weights = edgelist[,3]
         edgelist = edgelist[,1:2]
-    }
-    
-    if (ncol(edgelist ==2)) {
-        weights = rep(1, nrow(edgelist))
+        weighted = TRUE
     }
  
     if (directed == 0 || directed == 1) {directed = as.logical(directed)}
@@ -40,6 +41,7 @@ sbm <- function(edgelist, maxComms = 2, degreeCorrect = 0, directed = FALSE, klP
     attr(Results, "degreeCorrect") <- degreeCorrect == 1
     attr(Results, "directed") <- directed
     attr(Results, "klPerNetwork") <- klPerNetwork
+    attr(Results, "weighted") <- weighted
     
     Results
 }
