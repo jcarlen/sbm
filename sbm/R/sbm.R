@@ -14,6 +14,7 @@ sbm <- function(edgelist, maxComms = 2, degreeCorrect = 0, directed = FALSE, klP
     if (is.null(dim(edgelist)) || ncol(edgelist) < 2) {
         stop("edgelist must have at least two columns, three if weights are supplied")
     }
+    if (is.list(edgelist)) {edgelist = as.matrix(edgelist)} #convert from data frame to matrix if necessary
     
     if (ncol(edgelist) == 2) {
         weights = rep(1, nrow(edgelist))

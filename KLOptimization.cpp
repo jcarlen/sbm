@@ -38,12 +38,12 @@ using namespace std;
 // multi-edge appears a number of times equal to its multiplicity. 
 
 // USER CONTROLLED VARIABLES
-const long int Nodes = 34;   // Number of nodes in the network
+const long int Nodes = 330;   // Number of nodes in the network
 const int MAXEDGES = 10000000;  // this is the maximum number of edges
 const int DegreeCorrect = 1; // 0 means don't correct for the degrees, 1 means do correct for the degrees.
 // This changes how the score is computed as in the paper.
 const int KLPerNetwork = 100; // this is the number of KL runs on a network
-const int MaxComms = 2;  // the number of communities
+const int MaxComms = 6;  // the number of communities
 const int ReadInOption = 1;  // 0 reads in a wg2 file, 1 reads in a edge list (see functions below)
 const int TrueCommsAvailable = 0; // 1 reads them in and includes in printout
 const int InitializationOption = 0; // 0 is random, 1 = ground truth initialization
@@ -275,8 +275,8 @@ void GetTheNetworkEdges()
      long int i,j;
      ifstream InputFile;
      ifstream InputFile2;
-     string fileName = "zachrep.txt";
-     string fileName2 = "polBlogsSymmLargestFComms.txt";
+     string fileName = "ny139_AMcommuteRep.txt"; /// "zachrep.txt"; ///
+     string fileName2 = "polBlogsSymmLargestFComms0";
      string lineread;
      char *buffer;
      long int entry1 = 0;
@@ -368,13 +368,14 @@ void GetTheNetworkEdges()
          Degree[EdgeList[i][0]]++;
          Degree[EdgeList[i][1]]++;
      }
-     
+    
      // Now we make space in the adjacency lists
      for(i=0; i < Nodes; i++)
      {
      AdjList[i] = new long int [Degree[i]];
      }
-     
+    
+    
      // Now we read the edges into the adjacency lists utilizing lastempty to put them into
      // the proper spots
      for(i=0; i < counter; i++)
@@ -385,7 +386,7 @@ void GetTheNetworkEdges()
        AdjList[EdgeList[i][1]][LastEmpty[EdgeList[i][1]]] = EdgeList[i][0];
        LastEmpty[EdgeList[i][1]]++;
      }        
-     
+    
      cout << "Read in twice edges = " << TwiceEdges << endl;
 
      return;
@@ -577,11 +578,11 @@ void Initialize()
      {
         for(j=0; j < Degree[i]; j++)
         {
-           neighbor = AdjList[i][j];
+           neighbor = AdjList[i][j]; ///each edge listed twice, once for each end
            BestEdgeMatrix[BestState[i]][BestState[neighbor]]++;
            // the following statement prevents us from quadruple counting same comm edges.
            if(BestState[neighbor] != BestState[i])
-           BestEdgeMatrix[BestState[neighbor]][BestState[i]]++;
+           BestEdgeMatrix[BestState[neighbor]][BestState[i]]++; /// add once to ij, once to ji
         }
      }
      
@@ -604,12 +605,10 @@ void Initialize()
      {
         for(j=0; j < MaxComms; j++)
         {
-           ///cout << CurrentCommVertices[i] <<endl;
-           ///if(i==j)
-           ///cout << 2*BestEdgeMatrix[i][j]/TwiceEdges << " ";
-           ///if(i!=j)
-           ///cout << BestEdgeMatrix[i][j]/TwiceEdges << " ";
-            cout << CurrentEdgeMatrix[i][j] << " ";
+            if(i==j)
+                cout << 2*BestEdgeMatrix[i][j]/TwiceEdges << " ";
+            if(i!=j)
+                cout << BestEdgeMatrix[i][j]/TwiceEdges << " ";
         }
         cout << endl;
      }
