@@ -1,10 +1,9 @@
 /// TO DO: 1) Add twice diag option for undirected? Move to R side?
 ///        2) Fix the code for reading in given initial communities (on the R and cpp ends)
-///        3) Change double back to float? Does it make a difference?
 
 /// CHANGES: 1) Edge matrices are vectors (get same behavior using row and column indexing) so they can be declared and then size changed.
 ///          2) Use Rcpp for random community generation, no rng dependence
-///
+///          3) Doubles instead of floats - need precision for LogFunction
 
 // -------------------------------------------------------------
 
@@ -73,8 +72,8 @@ std::vector<double>BestCommStubs; //if directed, keeps tally of edges originatin
 std::vector<double>BestCommEnds; //for directed, keeps tally of edges ending in a class
 
 std::vector<int> CurrentCommVertices; //[MaxComms]
-std::vector<int> CurrentCommStubs;
-std::vector<int> CurrentCommEnds;
+std::vector<double> CurrentCommStubs;
+std::vector<double> CurrentCommEnds;
 
 std::vector<int> NeighborIndex; // [MaxComms] //lists the comm
 std::vector<int> outNeighborIndex;
@@ -299,7 +298,7 @@ List sbmFit(const IntegerMatrix & edgelist, const int maxComms, const int degree
     for(i=0; i < Nodes; i++)
         BestState[i] = SavedState[i];
     
-    return List::create(Rcpp::Named("FoundComms") = BestState,
+    return List::create(Rcpp::Named("FoundComms") = BestState, //note they will correspond to ORDER of IDs
                         Rcpp::Named("EdgeMatrix") = BestEdgeMatrix,
                         Rcpp::Named("HighestScore") = HighestScore);
 
@@ -761,15 +760,15 @@ double ComputeProposal(int vertex, int from, int destination)
 {
     int i;
     double ratiovalue = 0;
-    float fromcount = 0;
-    float destcount = 0;
-    float outfromcount = 0;
-    float outdestcount = 0;
+    double fromcount = 0;
+    double destcount = 0;
+    double outfromcount = 0;
+    double outdestcount = 0;
     
-    float help1;
-    float help2;
-    float help3;
-    float help4;
+    double help1;
+    double help2;
+    double help3;
+    double help4;
     
     if(from == destination)
         return 0;
@@ -797,10 +796,11 @@ double ComputeProposal(int vertex, int from, int destination)
                 // do update NOTE: each community mcc' gets updated once if it had edges switch out
                 // which is correct, remembering that mcc' is symmetric (///undirected case) and we only count c < c' here
      
-                help1 = float(CurrentEdgeMatrix[from * MaxComms + NeighborIndex[i]]);
-                help2 = float(CurrentEdgeMatrix[destination * MaxComms + NeighborIndex[i]]);
-                help3 = float(NeighborSet[i]);
-     
+                help1 = double(CurrentEdgeMatrix[from * MaxComms + NeighborIndex[i]]);
+                help2 = double(CurrentEdgeMatrix[destination * MaxComms + NeighborIndex[i]]);
+                help3 = double(NeighborSet[i]);
+                //if (help1 - help3 < 0) std::cout << "help1-help3  " << help1-help3 << std::endl;
+             
                 ratiovalue = ratiovalue + LogFunction(help1-help3) - LogFunction(help1);
                 ratiovalue = ratiovalue + LogFunction(help2+help3) - LogFunction(help2);
          }
@@ -823,6 +823,7 @@ double ComputeProposal(int vertex, int from, int destination)
      {
          help1 = double(CurrentCommStubs[from]);
          help2 = double(Degree[vertex]);
+         //if (help1 - help2 < 0) Rcout << "help1 - help2  " << help1 - help2 << "  help1  " << help1 << "  help2  " << help2 << std::endl;
          ratiovalue = ratiovalue - LogFunction(help1 - help2) + LogFunction(help1);
      }
      
@@ -830,6 +831,7 @@ double ComputeProposal(int vertex, int from, int destination)
      {
          help1 = double(CurrentCommStubs[from]);
          help2 = double(Degree[vertex]);
+         
          if(CurrentCommVertices[from] > 1)
             ratiovalue = ratiovalue - (help1-help2)*log(double(CurrentCommVertices[from]-1));
             ratiovalue = ratiovalue + help1*log(double(CurrentCommVertices[from]));
@@ -837,6 +839,7 @@ double ComputeProposal(int vertex, int from, int destination)
      
      // now we do from/from
      help1 = double(2*CurrentEdgeMatrix[from * MaxComms + from]);
+         
      help2 = double(2*SelfEdgeCounter + 2*fromcount);
      ratiovalue = ratiovalue + .5*LogFunction(help1 - help2) - .5*LogFunction(help1);
      
@@ -927,10 +930,10 @@ double ComputeProposal(int vertex, int from, int destination)
      }
      
      // now we add in the term corresponding to from / dest
-     help1 = float(CurrentEdgeMatrix[from * MaxComms + destination]); /// total white to black
-     help2 = float(fromcount-outdestcount); /// white to white - white to black
-     help3 = float(CurrentEdgeMatrix[destination * MaxComms + from]); /// total black to white
-     help4 = float(outfromcount-destcount); /// white to white - black to white
+     help1 = double(CurrentEdgeMatrix[from * MaxComms + destination]); /// total white to black
+     help2 = double(fromcount-outdestcount); /// white to white - white to black
+     help3 = double(CurrentEdgeMatrix[destination * MaxComms + from]); /// total black to white
+     help4 = double(outfromcount-destcount); /// white to white - black to white
      
      ratiovalue = ratiovalue + LogFunction(help1 + help2) - LogFunction(help1); /// w 2 b - self-edges already excluded
      ratiovalue = ratiovalue + LogFunction(help3 + help4) - LogFunction(help3); /// b 2 w
@@ -1011,10 +1014,10 @@ double ComputeProposal(int vertex, int from, int destination)
 void UpdateMatrices(int vertex, int option, int from, int destination)
 {
     int i;
-    float fromcount = 0;
-    float destcount = 0;
-    float outfromcount = 0;
-    float outdestcount = 0;
+    double fromcount = 0;
+    double destcount = 0;
+    double outfromcount = 0;
+    double outdestcount = 0;
     
     if ( !Directed )
     {
@@ -1204,9 +1207,17 @@ void UpdateMatrices(int vertex, int option, int from, int destination)
 
 double LogFunction(double x)
 {
-    if(x < 0)
+    long double tol = 0.0000000001; // this prevents loops due to numerical errors.
+    //double tol = std::numeric_limits<double>::epsilon();
+    
+    if(x < -1.0*tol)
     {
         throw std::range_error("SOMETHING WRONG HAS OCCURRED STOP! x is below zero: ");
+    }
+    
+    if (x > -1.0*tol && x <= tol) {
+        //std::cout << "x within tol" << std::endl;
+        return 0;
     }
     
     if (x == 0)
