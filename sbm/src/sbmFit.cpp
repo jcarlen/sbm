@@ -125,6 +125,7 @@ List sbmFit(const IntegerMatrix & edgelist, const int maxComms, const int degree
     }
     
     Nodes = NodeSet.size();
+    std::cout << "Nodes " << Nodes << std::endl;
     MaxComms = maxComms;
     DegreeCorrect = degreeCorrect;
     Directed = directed;
@@ -618,7 +619,7 @@ double ComputeInitialScore()
         
     }
     
-    Rcout << "sum" << sum << std::endl;
+    Rcout << "sum " << sum << std::endl;
     return sum;
     
     
