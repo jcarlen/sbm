@@ -25,7 +25,7 @@ KLt <- function(edgelist.time, klPerNetwork = 50, maxComms = 2, seedComms = NULL
     } else {
         
         #extract unique nodes and re-level them to 1:N
-        nodes = as.factor(unique(unlist(sapply(1:length(edgelist.time), function(x) {unlist(edgelist.time[[x]][,1:2])}))))
+        nodes = unique(as.vector(unlist(sapply(1:length(edgelist.time), function(x) {unlist(edgelist.time[[x]][,1:2])}))))
         N = length(nodes)
         i = 1
         
