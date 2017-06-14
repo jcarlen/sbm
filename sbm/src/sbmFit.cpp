@@ -89,10 +89,11 @@ std::vector<double> CurrentEdgeMatrix;
 
 std::vector<int> ActualDiffComms;
 std::vector<int> outActualDiffComms;
+std::vector<double> SelfEdgeCounter;
 
 int Nodes, MaxComms, KLPerNetwork, DegreeCorrect, T;
 bool Directed;
-double MaxScore, SelfEdgeCounter; // records the *weight* of self-edges (not doubled) so they can be counted correctly.
+double MaxScore; // records the *weight* of self-edges (not doubled) so they can be counted correctly.
 
 //*********************** FUNCTION DECLARATIONS **************************************************************
 
@@ -613,7 +614,9 @@ double ComputeInitialScore()
                 }
                 
             }
+        //Rcout << "sum after time" << t << " " << sum <<std::endl;
         }
+        
     }
     
     if ( Directed )
@@ -627,18 +630,21 @@ double ComputeInitialScore()
                 {
                     double bestval;
                     
-                    if (DegreeCorrect == 1)
-                        bestval = BestCommStubs[i + t*MaxComms]*BestCommEnds[j + t*MaxComms];
-                    else
-                        bestval = BestCommVertices[i]*BestCommVertices[j];
+                    if (DegreeCorrect == 1) {
+                        bestval = BestCommStubs[i + t*MaxComms] * BestCommEnds[j + t*MaxComms];
+                    } else {
+                        bestval = BestCommVertices[i] * BestCommVertices[j];
+                    }
                     
                     sum = sum + LogFunction(BestEdgeMatrix[i*MaxComms+j + t*MaxComms*MaxComms]);
+                    
                     if ( bestval > 0 && BestEdgeMatrix[i*MaxComms+j + t*MaxComms*MaxComms] > 0)
                         sum = sum - BestEdgeMatrix[i*MaxComms+j + t*MaxComms*MaxComms] * log(bestval);
                     
                 }
                 
             }
+            
         }
     }
     
@@ -662,8 +668,7 @@ void ComputeNeighborSet(int vertex, int option, IntegerMatrix AdjList, NumericMa
     int i;
     int neighbor;
     double tol = std::numeric_limits<double>::epsilon();
-    
-    SelfEdgeCounter = 0;
+    SelfEdgeCounter.assign(T, 0.0);
     
     if ( !Directed )
     {
@@ -696,10 +701,10 @@ void ComputeNeighborSet(int vertex, int option, IntegerMatrix AdjList, NumericMa
                     TempNeighborSet[BestState[neighbor]] += AdjListWeight(vertex, i);
             }
             if(neighbor == vertex)
-                SelfEdgeCounter += AdjListWeight(vertex, i);
+                SelfEdgeCounter[time] += AdjListWeight(vertex, i);
         }
 
-        SelfEdgeCounter = SelfEdgeCounter/2; /// ONLY if undirected
+        SelfEdgeCounter[time] = SelfEdgeCounter[time]/2; /// ONLY if undirected
         
         ActualDiffComms[time] = 0;
         for(i=0; i < MaxComms; i++)
@@ -743,7 +748,7 @@ void ComputeNeighborSet(int vertex, int option, IntegerMatrix AdjList, NumericMa
                      TempNeighborSet[BestState[neighbor]] += AdjListWeight(vertex, i);
              }
              if(neighbor == vertex)
-                 SelfEdgeCounter += SelfTwice * AdjListWeight(vertex, i);  /// count self-edges ONCE unless selftwice is 2
+                 SelfEdgeCounter[time] += SelfTwice * AdjListWeight(vertex, i);  /// count self-edges ONCE unless selftwice is 2
          }
          
          for(i=0; i < outCount[vertex + time*Nodes]; i++)
@@ -873,15 +878,19 @@ double ComputeProposal(int vertex, int from, int destination)
                  help1 = double(CurrentCommStubs[from + t*MaxComms]);
                  help2 = double(Degree[vertex + t*Nodes]);
                  
-                 if(CurrentCommVertices[from] > 1)
+                 if(CurrentCommVertices[from] > 1) {
                     ratiovalue = ratiovalue - (help1-help2)*log(double(CurrentCommVertices[from]-1));
                     ratiovalue = ratiovalue + help1*log(double(CurrentCommVertices[from]));
+                 }
              }
              
              // now we do from/from
              help1 = double(2*CurrentEdgeMatrix[from * MaxComms + from + t*MaxComms*MaxComms]);
-             help2 = double(2*SelfEdgeCounter + 2*fromcount);
+             help2 = double(2*SelfEdgeCounter[t] + 2*fromcount);
              
+             if (SelfEdgeCounter > 0) {
+                 std::cout << "SelfEdgeCounter, t = " << t << ", vertex = " << vertex << ", SEC = " << SelfEdgeCounter[t] << std::endl;
+             }
              if (help1 - help2 < 0) std::cout << "help1 - help2 (2)  " << help1 - help2 << std::endl;
              if (help1 < 0) std::cout << "help1 (2) " << help1 << std::endl;
              
@@ -907,7 +916,7 @@ double ComputeProposal(int vertex, int from, int destination)
              // and now dest/dest
 
              help1 = double(2*CurrentEdgeMatrix[destination * MaxComms + destination + t*MaxComms*MaxComms]);
-             help2 = double(2*SelfEdgeCounter + 2*destcount);
+             help2 = double(2*SelfEdgeCounter[t] + 2*destcount);
              
              if (help1 + help2 < 0) std::cout << "help1 + help2  (3)" << help1 + help2 << std::endl;
              if (help1 < 0) std::cout << "help1 (3)" << help1 << std::endl;
@@ -992,8 +1001,9 @@ double ComputeProposal(int vertex, int from, int destination)
              
              // now we do from/from
              help1 = double(CurrentEdgeMatrix[from * MaxComms + from + t*MaxComms*MaxComms]);
-             help2 = double(SelfEdgeCounter + fromcount + outfromcount);
+             help2 = double(SelfEdgeCounter[t] + fromcount + outfromcount);
              
+             std::cout << "SelfEdgeCounter, t = " << t << ", SEC = " << SelfEdgeCounter[t] << std::endl;
              if (help1 - help2 < 0) std::cout << "help1 - help2 (2)  " << help1 - help2 << std::endl;
              if (help1 < 0) std::cout << "help1 (2) " << help1 << std::endl;
              
@@ -1002,7 +1012,7 @@ double ComputeProposal(int vertex, int from, int destination)
              
              // and now dest/dest
              help1 = double(CurrentEdgeMatrix[destination * MaxComms + destination + t*MaxComms*MaxComms]);
-             help2 = double(SelfEdgeCounter + destcount + outdestcount);
+             help2 = double(SelfEdgeCounter[t] + destcount + outdestcount);
              ratiovalue = ratiovalue + LogFunction(help1 + help2) - LogFunction(help1);
              
              if(DegreeCorrect == 1)
@@ -1036,16 +1046,18 @@ double ComputeProposal(int vertex, int from, int destination)
                  ///in
                  help1 = double(CurrentCommEnds[from + t*MaxComms]);
                  help2 = double(Degree[vertex + t*Nodes]);
-                 if(CurrentCommVertices[from] > 1)
+                 if(CurrentCommVertices[from] > 1) {
                      ratiovalue = ratiovalue - (help1 - help2) * log(double(CurrentCommVertices[from]-1)); ///update
-                    ratiovalue = ratiovalue + help1 * log(double(CurrentCommVertices[from]));  ///current
+                     ratiovalue = ratiovalue + help1 * log(double(CurrentCommVertices[from]));  ///current
+                 }
                  
                  ///out
                  help1 = double(CurrentCommStubs[from + t*MaxComms]);
                  help2 = double(outDegree[vertex + t*Nodes]);
-                 if(CurrentCommVertices[from] > 1)
+                 if(CurrentCommVertices[from] > 1) {
                      ratiovalue = ratiovalue - (help1 - help2) * log(double(CurrentCommVertices[from]-1));
                      ratiovalue = ratiovalue + help1 * log(double(CurrentCommVertices[from]));
+                 }
                  
                  ///in
                  help1 = double(CurrentCommEnds[destination + t*MaxComms]);
@@ -1061,8 +1073,7 @@ double ComputeProposal(int vertex, int from, int destination)
               }
              
         }
-
-        ratiovalue += ratiovalue;
+        
     }
         return ratiovalue;
 }
@@ -1081,7 +1092,7 @@ void UpdateMatrices(int vertex, int option, int from, int destination)
             CurrentCommVertices[from]--;
             CurrentCommVertices[destination]++;
             
-            for (int t = 0; t <T; t++) {
+            for (int t = 0; t < T; t++) {
                 
                 fromcount = 0;
                 destcount = 0;
@@ -1110,8 +1121,8 @@ void UpdateMatrices(int vertex, int option, int from, int destination)
                         destcount = NeighborSet[i + t*MaxComms];
                 }
                 
-                CurrentEdgeMatrix[from * MaxComms + from + t*MaxComms*MaxComms] -= (SelfEdgeCounter + fromcount);
-                CurrentEdgeMatrix[destination * MaxComms + destination + t*MaxComms*MaxComms] += (SelfEdgeCounter + destcount);
+                CurrentEdgeMatrix[from * MaxComms + from + t*MaxComms*MaxComms] -= (SelfEdgeCounter[t] + fromcount);
+                CurrentEdgeMatrix[destination * MaxComms + destination + t*MaxComms*MaxComms] += (SelfEdgeCounter[t] + destcount);
                 CurrentEdgeMatrix[from * MaxComms + destination + t*MaxComms*MaxComms] += (fromcount - destcount);
                 CurrentEdgeMatrix[destination * MaxComms + from + t*MaxComms*MaxComms] += (fromcount - destcount);
                 
@@ -1123,7 +1134,7 @@ void UpdateMatrices(int vertex, int option, int from, int destination)
             BestCommVertices[from]--;
             BestCommVertices[destination]++;
             
-            for (int t = 0; t <T; t++) {
+            for (int t = 0; t < T; t++) {
                 
                 fromcount = 0;
                 destcount = 0;
@@ -1152,8 +1163,8 @@ void UpdateMatrices(int vertex, int option, int from, int destination)
                         destcount = NeighborSet[i + t*MaxComms];
                 }
                 
-                BestEdgeMatrix[from * MaxComms + from + t*MaxComms*MaxComms] -= (SelfEdgeCounter + fromcount);
-                BestEdgeMatrix[destination * MaxComms + destination + t*MaxComms*MaxComms] += (SelfEdgeCounter + destcount);
+                BestEdgeMatrix[from * MaxComms + from + t*MaxComms*MaxComms] -= (SelfEdgeCounter[t] + fromcount);
+                BestEdgeMatrix[destination * MaxComms + destination + t*MaxComms*MaxComms] += (SelfEdgeCounter[t] + destcount);
                 BestEdgeMatrix[from * MaxComms + destination + t*MaxComms*MaxComms] += (fromcount - destcount);
                 BestEdgeMatrix[destination * MaxComms + from + t*MaxComms*MaxComms] += (fromcount - destcount);
                 
@@ -1172,7 +1183,7 @@ void UpdateMatrices(int vertex, int option, int from, int destination)
             CurrentCommVertices[from]--;
             CurrentCommVertices[destination]++;
             
-            for (int t = 0; t <T; t++)
+            for (int t = 0; t < T; t++)
             {
                 fromcount = 0;
                 destcount = 0;
@@ -1219,9 +1230,9 @@ void UpdateMatrices(int vertex, int option, int from, int destination)
                 }
                 
                 CurrentEdgeMatrix[from * MaxComms + from + t*MaxComms*MaxComms] -=
-                (fromcount + outfromcount + SelfEdgeCounter);
+                (fromcount + outfromcount + SelfEdgeCounter[t]);
                 CurrentEdgeMatrix[destination * MaxComms + destination + t*MaxComms*MaxComms] +=
-                (destcount + outdestcount + SelfEdgeCounter);
+                (destcount + outdestcount + SelfEdgeCounter[t]);
                 CurrentEdgeMatrix[destination * MaxComms + from + t*MaxComms*MaxComms] +=
                 (outfromcount - destcount); /// reminder: self-edges NOT included with NeighborSet
                 CurrentEdgeMatrix[from * MaxComms + destination + t*MaxComms*MaxComms] +=
@@ -1234,7 +1245,7 @@ void UpdateMatrices(int vertex, int option, int from, int destination)
             BestCommVertices[from]--;
             BestCommVertices[destination]++;
             
-            for (int t = 0; t <T; t++)
+            for (int t = 0; t < T; t++)
             {
                 fromcount = 0;
                 destcount = 0;
@@ -1281,9 +1292,9 @@ void UpdateMatrices(int vertex, int option, int from, int destination)
           
                 /// already dealt with self edges
                 BestEdgeMatrix[from * MaxComms + from + t*MaxComms*MaxComms] -=
-                (fromcount + outfromcount + SelfEdgeCounter);
+                (fromcount + outfromcount + SelfEdgeCounter[t]);
                 BestEdgeMatrix[destination * MaxComms + destination + t*MaxComms*MaxComms] +=
-                (destcount + outdestcount + SelfEdgeCounter);
+                (destcount + outdestcount + SelfEdgeCounter[t]);
                 BestEdgeMatrix[destination * MaxComms + from + t*MaxComms*MaxComms] +=
                 (outfromcount - destcount); /// reminder: self-edges NOT included with NeighborSet
                 BestEdgeMatrix[from * MaxComms + destination + t*MaxComms*MaxComms] +=
@@ -1562,7 +1573,8 @@ List RunKLt(SEXP edgelistTime, const int maxComms, const bool directed, const in
                 
                 for (t = 0; t < T; t++) {
                     CurrentCommStubs[i + t*MaxComms] = BestCommStubs[i + t*MaxComms];
-                    if ( Directed ) CurrentCommEnds[i + t*MaxComms] = BestCommEnds[i + t*MaxComms];
+                    if ( Directed )
+                        CurrentCommEnds[i + t*MaxComms] = BestCommEnds[i + t*MaxComms];
                     for(j=0; j < MaxComms; j++)
                         CurrentEdgeMatrix[i*MaxComms+j + t*MaxComms*MaxComms] = BestEdgeMatrix[i*MaxComms+j + t*MaxComms*MaxComms];
                 }
@@ -1770,7 +1782,7 @@ void InitializeKLt(List AdjListT, List AdjListWeightT)
     }
     
     
-    for (int t = 0; t <T; t ++)
+    for (int t = 0; t < T; t ++)
     {
         
         if ( !Directed )
