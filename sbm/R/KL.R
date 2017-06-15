@@ -60,14 +60,14 @@ KLt <- function(edgelist.time, klPerNetwork = 50, maxComms = 2, seedComms = NULL
         }
     
     # Create total matrix; remove diag?
-    edgelist.total = lapply(edgelist.time,
-    function (x){
-        tmp = igraph::graph.data.frame(x, vertices = 0:(N-1))
-        igraph::as_adjacency_matrix(tmp, sparse = F, attr = "V3")
-        })
+    # edgelist.total = lapply(edgelist.time,
+    # function (x){
+    #    tmp = igraph::graph.data.frame(x, vertices = 0:(N-1))
+    #    igraph::as_adjacency_matrix(tmp, sparse = F, attr = "V3")
+    #    })
         
-    edgelist.total = Reduce('+', edgelist.total)
-    edgelist.total = reshape2::melt(edgelist.total)
+    # edgelist.total = Reduce('+', edgelist.total)
+    # edgelist.total = reshape2::melt(edgelist.total)
     
     }
     
@@ -83,6 +83,15 @@ KLt <- function(edgelist.time, klPerNetwork = 50, maxComms = 2, seedComms = NULL
     
     ## Make the call...
     
-    Results <- RunKLt(edgelist.time, as.matrix(edgelist.total[,1:2], ncol = 2), as.vector(edgelist.total[,3]), maxComms, directed, klPerNetwork, degreeCorrect, N)
-
+    Results <- RunKLt(edgelist.time,
+                      #as.matrix(edgelist.total[,1:2], ncol = 2), as.vector(edgelist.total[,3]),
+                      maxComms, directed, klPerNetwork, degreeCorrect, N)
+    
+    #Reformat best matrices
+    T = length(edgelist.time)
+    Results$TimeMatrices = sapply(1:T, function(x) {
+        matrix(Results$EdgeMatrix[ (maxComms^2 * (x-1) + 1) : (maxComms^2 * x) ], nrow = maxComms, ncol = maxComms)
+    }, simplify = F,  USE.NAMES = F)
+    
+    Results
 }

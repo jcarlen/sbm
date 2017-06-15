@@ -10,7 +10,7 @@
 # '@directed whether the network is directed and off-diagonal block parameters may be assymetrical
 #' @KLPerNetwork this is the number of KL runs on a network
 
-sbm <- function(edgelist, maxComms = 2, degreeCorrect = 0, directed = FALSE, klPerNetwork = 50, seedComms = NULL, seed = NULL)
+sbm <- function(edgelist, maxComms = 2, degreeCorrect = F, directed = FALSE, klPerNetwork = 50, seedComms = NULL, seed = NULL)
 
 {
     # Argument Checks
@@ -46,6 +46,7 @@ sbm <- function(edgelist, maxComms = 2, degreeCorrect = 0, directed = FALSE, klP
         stop("Directed should be FALSE or TRUE (0 or 1 OK)")
     }
     
+    degreeCorrect = as.numeric(degreeCorrect) # relic of Karrer and Newman code to have degreeCorrect be 0|1
     
     #seed?
     

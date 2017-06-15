@@ -888,9 +888,10 @@ double ComputeProposal(int vertex, int from, int destination)
              help1 = double(2*CurrentEdgeMatrix[from * MaxComms + from + t*MaxComms*MaxComms]);
              help2 = double(2*SelfEdgeCounter[t] + 2*fromcount);
              
-             if (SelfEdgeCounter > 0) {
+             /*if (SelfEdgeCounter[t] > 0) {
                  std::cout << "SelfEdgeCounter, t = " << t << ", vertex = " << vertex << ", SEC = " << SelfEdgeCounter[t] << std::endl;
-             }
+             }*/
+             
              if (help1 - help2 < 0) std::cout << "help1 - help2 (2)  " << help1 - help2 << std::endl;
              if (help1 < 0) std::cout << "help1 (2) " << help1 << std::endl;
              
@@ -1003,7 +1004,7 @@ double ComputeProposal(int vertex, int from, int destination)
              help1 = double(CurrentEdgeMatrix[from * MaxComms + from + t*MaxComms*MaxComms]);
              help2 = double(SelfEdgeCounter[t] + fromcount + outfromcount);
              
-             std::cout << "SelfEdgeCounter, t = " << t << ", SEC = " << SelfEdgeCounter[t] << std::endl;
+             //std::cout << "SelfEdgeCounter, t = " << t << ", SEC = " << SelfEdgeCounter[t] << std::endl;
              if (help1 - help2 < 0) std::cout << "help1 - help2 (2)  " << help1 - help2 << std::endl;
              if (help1 < 0) std::cout << "help1 (2) " << help1 << std::endl;
              
