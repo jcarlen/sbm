@@ -69,10 +69,16 @@ std::vector<int> TrueState; // This records the true communities if they exist r
 std::vector<int> BestCommVertices; //[MaxComms]
 std::vector<double>BestCommStubs; //if directed, keeps tally of edges originating in a class
 std::vector<double>BestCommEnds; //for directed, keeps tally of edges ending in a class
+std::vector<double>BestCommStubsTotal; // For networks with time slices, total stubs over all time periods
+std::vector<double>BestCommEndsTotal; //    For use with DegreeCorrect = 2
+
 
 std::vector<int> CurrentCommVertices; //[MaxComms]
 std::vector<double> CurrentCommStubs;
 std::vector<double> CurrentCommEnds;
+std::vector<double>CurrentCommStubsTotal;
+std::vector<double>CurrentCommEndsTotal;
+
 
 std::vector<int> NeighborIndex; // [MaxComms] //lists the comm
 std::vector<int> outNeighborIndex;
@@ -585,34 +591,45 @@ double ComputeInitialScore()
     // are whether the score increases
     // We will want this when we compare different initializations
     
-    int i,j;
+    int i,j, t;
     double sum = 0;
+    double tol = std::numeric_limits<double>::epsilon();
     
     if ( !Directed ) // this actually returns 1/2 the unnormalized log-likelihood listed in the paper
     {
         
-        for (int t = 0; t < T; t++) {
-
+      
+        for (t = 0; t < T; t++) {
+            
             for(i=0; i < MaxComms; i++)
             {
-                if(DegreeCorrect == 1)
-                    sum = sum - LogFunction(BestCommStubs[i + t*MaxComms]); //LogFunction is x*log(x) or 0 if x is 0
-                
                 if(DegreeCorrect == 0)
                 {
                     if(BestCommVertices[i] != 0)
                         sum = sum - (BestCommStubs[i + t*MaxComms]) * log(BestCommVertices[i]);
                 }
                 
-                for(j=i; j < MaxComms; j++)
-                {
-                    if(j != i)
-                        sum = sum + LogFunction(BestEdgeMatrix[i*MaxComms+j + t*MaxComms*MaxComms]);
-                    
-                    if(i==j)
-                        sum = sum + .5*LogFunction(2*BestEdgeMatrix[i*MaxComms+j + t*MaxComms*MaxComms]);
+                if(DegreeCorrect == 1) {
+                    sum = sum - LogFunction(BestCommStubs[i + t*MaxComms]); //LogFunction is x*log(x) or 0 if x is 0
                 }
                 
+                for(j=i; j < MaxComms; j++)
+                {
+                    if (DegreeCorrect == 2)
+                    {
+                        if (BestCommStubsTotal[i]*BestCommStubsTotal[j] > tol)
+                            sum -= BestEdgeMatrix[i*MaxComms+j + t*MaxComms*MaxComms]*log(BestCommStubsTotal[i]*BestCommStubsTotal[j]);
+                    } else {
+                        
+                        if(j != i)
+                            sum = sum + LogFunction(BestEdgeMatrix[i*MaxComms+j + t*MaxComms*MaxComms]);
+                        if (i==j)
+                            sum = sum + .5*LogFunction(2*BestEdgeMatrix[i*MaxComms+j + t*MaxComms*MaxComms]);
+                            /// reminder: twice the diag of BestEdgeMatrix + everything else in the matrix once should = 2x edges
+                            ///           we halved the weights when entering them into diag blocks, which is why *2 next line
+                            ///           the .5 is because we're doing half the unnormalized log likelihoo
+                    }
+                }
             }
         //Rcout << "sum after time" << t << " " << sum <<std::endl;
         }
@@ -622,25 +639,32 @@ double ComputeInitialScore()
     if ( Directed )
     {
      
-        for (int t = 0; t < T; t++) {
+        
+        for (t = 0; t < T; t++) {
             
             for(i=0; i < MaxComms; i++)
             {
                 for(j = 0; j < MaxComms; j++)
                 {
-                    double bestval;
-                    
-                    if (DegreeCorrect == 1) {
-                        bestval = BestCommStubs[i + t*MaxComms] * BestCommEnds[j + t*MaxComms];
-                    } else {
-                        bestval = BestCommVertices[i] * BestCommVertices[j];
-                    }
                     
                     sum = sum + LogFunction(BestEdgeMatrix[i*MaxComms+j + t*MaxComms*MaxComms]);
                     
+                    double bestval;
+                    
+                    if (DegreeCorrect == 0) {
+                        bestval = BestCommVertices[i] * BestCommVertices[j];
+                    }
+                    
+                    if (DegreeCorrect == 1) {
+                        bestval = BestCommStubs[i + t*MaxComms] * BestCommEnds[j + t*MaxComms];
+                    }
+                    
+                    if (DegreeCorrect == 2) {
+                        bestval = BestCommStubsTotal[i]*BestCommEndsTotal[j];
+                    }
+                    
                     if ( bestval > 0 && BestEdgeMatrix[i*MaxComms+j + t*MaxComms*MaxComms] > 0)
                         sum = sum - BestEdgeMatrix[i*MaxComms+j + t*MaxComms*MaxComms] * log(bestval);
-                    
                 }
                 
             }
@@ -818,10 +842,10 @@ double ComputeProposal(int vertex, int from, int destination)
              // if the degree of the vertex is zero we know nothing about it
              // in this case we don't ever change its community
              // at the end we put all degree zeroes into their own group
-             if(DegreeCorrect == 1)
+             if(DegreeCorrect >= 1)
              {
                  if(Degree[vertex + t*Nodes] == 0)
-                 return 0;
+                     return 0;
              }
              
              // we first add up all the cross-terms (between communities that are not from / destination)
@@ -864,6 +888,17 @@ double ComputeProposal(int vertex, int from, int destination)
              ratiovalue = ratiovalue + LogFunction(help1 + help2) - LogFunction(help1);
              
              // now we add in the terms corresponding to from
+             if(DegreeCorrect == 0)
+             {
+                 help1 = double(CurrentCommStubs[from + t*MaxComms]);
+                 help2 = double(Degree[vertex + t*Nodes]);
+                 
+                 if(CurrentCommVertices[from] > 1) {
+                     ratiovalue = ratiovalue - (help1-help2)*log(double(CurrentCommVertices[from]-1));
+                     ratiovalue = ratiovalue + help1*log(double(CurrentCommVertices[from]));
+                 }
+             }
+             
              if(DegreeCorrect == 1)
              {
                  help1 = double(CurrentCommStubs[from + t*MaxComms]);
@@ -873,15 +908,13 @@ double ComputeProposal(int vertex, int from, int destination)
                  ratiovalue = ratiovalue - LogFunction(help1 - help2) + LogFunction(help1);
              }
              
-             if(DegreeCorrect == 0)
+             if(DegreeCorrect == 2)
              {
-                 help1 = double(CurrentCommStubs[from + t*MaxComms]);
+                 help1 = double(CurrentCommStubsTotal[from]);
                  help2 = double(Degree[vertex + t*Nodes]);
                  
-                 if(CurrentCommVertices[from] > 1) {
-                    ratiovalue = ratiovalue - (help1-help2)*log(double(CurrentCommVertices[from]-1));
-                    ratiovalue = ratiovalue + help1*log(double(CurrentCommVertices[from]));
-                 }
+                 //if (help1 - help2 < 0) Rcout << "help1 - help2  " << help1 - help2 << "  help1  " << help1 << "  help2  " << help2 << std::endl;
+                 ratiovalue = ratiovalue - LogFunction(help1 - help2) + LogFunction(help1);
              }
              
              // now we do from/from
@@ -898,20 +931,27 @@ double ComputeProposal(int vertex, int from, int destination)
              ratiovalue = ratiovalue + .5*LogFunction(help1 - help2) - .5*LogFunction(help1);
              
              // now we add in the terms corresponding to dest
-             if(DegreeCorrect == 1)
-             {
-                 help1 = double(CurrentCommStubs[destination + t*MaxComms]);
-                 help2 = double(Degree[vertex + t*Nodes]);
-                 ratiovalue = ratiovalue - LogFunction(help1 + help2) + LogFunction(help1);
-             }
-             
              if(DegreeCorrect == 0)
              {
                  help1 = double(CurrentCommStubs[destination + t*MaxComms]);
                  help2 = double(Degree[vertex + t*Nodes]);
                  ratiovalue = ratiovalue - (help1+help2)*log(double(CurrentCommVertices[destination]+1));
                  if( CurrentCommVertices[destination] > 0)
-                    ratiovalue = ratiovalue + help1*log(double(CurrentCommVertices[destination]));
+                     ratiovalue = ratiovalue + help1*log(double(CurrentCommVertices[destination]));
+             }
+             
+             if(DegreeCorrect == 1)
+             {
+                 help1 = double(CurrentCommStubs[destination + t*MaxComms]);
+                 help2 = double(Degree[vertex + t*Nodes]);
+                 ratiovalue = ratiovalue - LogFunction(help1 + help2) + LogFunction(help1);
+             }
+            
+             if(DegreeCorrect == 2)
+             {
+                 help1 = double(CurrentCommStubsTotal[destination + t*MaxComms]);
+                 help2 = double(Degree[vertex + t*Nodes]);
+                 ratiovalue = ratiovalue - LogFunction(help1 + help2) + LogFunction(help1);
              }
              
              // and now dest/dest
@@ -934,7 +974,7 @@ double ComputeProposal(int vertex, int from, int destination)
              // if the total degree of the vertex is zero we know nothing about it
              // in this case we don't ever change its community
              // at the end we put all degree zeroes into their own group
-             if(DegreeCorrect == 1)
+             if(DegreeCorrect >= 1)
              {
                  if(Degree[vertex + t*Nodes] == 0 && outDegree[vertex + t*Nodes] == 0)
                      return 0;
@@ -1016,32 +1056,6 @@ double ComputeProposal(int vertex, int from, int destination)
              help2 = double(SelfEdgeCounter[t] + destcount + outdestcount);
              ratiovalue = ratiovalue + LogFunction(help1 + help2) - LogFunction(help1);
              
-             if(DegreeCorrect == 1)
-             {
-                 // now we add in the terms corresponding to from
-                 ///in
-                 help1 = double(CurrentCommEnds[from + t*MaxComms]);
-                 help2 = double(Degree[vertex + t*Nodes]);
-                 ratiovalue = ratiovalue - LogFunction(help1 - help2) + LogFunction(help1);
-                 
-                 ///out
-                 help1 = double(CurrentCommStubs[from + t*MaxComms]);
-                 help2 = double(outDegree[vertex + t*Nodes]);
-                 ratiovalue = ratiovalue - LogFunction(help1 - help2) + LogFunction(help1);
-                 
-                 // now we add in the terms corresponding to dest
-                 /// in
-                 help1 = double(CurrentCommEnds[destination + t*MaxComms]);
-                 help2 = double(Degree[vertex + t*Nodes]);
-                 ratiovalue = ratiovalue - LogFunction(help1 + help2) + LogFunction(help1);
-                 
-                 /// out
-                 help1 = double(CurrentCommStubs[destination + t*MaxComms]);
-                 help2 = double(outDegree[vertex + t*Nodes]);
-                 ratiovalue = ratiovalue - LogFunction(help1 + help2) + LogFunction(help1);
-             
-             }
-         
              if(DegreeCorrect == 0)
              {
                  ///in
@@ -1071,7 +1085,59 @@ double ComputeProposal(int vertex, int from, int destination)
                  help2 = double(outDegree[vertex + t*Nodes]);
                  ratiovalue = ratiovalue - (help1 + help2) * log(double(CurrentCommVertices[destination]+1));
                  ratiovalue = ratiovalue + help1 * log(double(CurrentCommVertices[destination]));
-              }
+             }
+             
+             if(DegreeCorrect == 1)
+             {
+                 // now we add in the terms corresponding to from
+                 ///in
+                 help1 = double(CurrentCommEnds[from + t*MaxComms]);
+                 help2 = double(Degree[vertex + t*Nodes]);
+                 ratiovalue = ratiovalue - LogFunction(help1 - help2) + LogFunction(help1);
+                 
+                 ///out
+                 help1 = double(CurrentCommStubs[from + t*MaxComms]);
+                 help2 = double(outDegree[vertex + t*Nodes]);
+                 ratiovalue = ratiovalue - LogFunction(help1 - help2) + LogFunction(help1);
+                 
+                 // now we add in the terms corresponding to dest
+                 /// in
+                 help1 = double(CurrentCommEnds[destination + t*MaxComms]);
+                 help2 = double(Degree[vertex + t*Nodes]);
+                 ratiovalue = ratiovalue - LogFunction(help1 + help2) + LogFunction(help1);
+                 
+                 /// out
+                 help1 = double(CurrentCommStubs[destination + t*MaxComms]);
+                 help2 = double(outDegree[vertex + t*Nodes]);
+                 ratiovalue = ratiovalue - LogFunction(help1 + help2) + LogFunction(help1);
+             
+             }
+         
+             if(DegreeCorrect == 2)
+             {
+                 // now we add in the terms corresponding to from
+                 ///in
+                 help1 = double(CurrentCommEndsTotal[from]);
+                 help2 = double(Degree[vertex + t*Nodes]);
+                 ratiovalue = ratiovalue - LogFunction(help1 - help2) + LogFunction(help1);
+                 
+                 ///out
+                 help1 = double(CurrentCommStubsTotal[from]);
+                 help2 = double(outDegree[vertex + t*Nodes]);
+                 ratiovalue = ratiovalue - LogFunction(help1 - help2) + LogFunction(help1);
+                 
+                 // now we add in the terms corresponding to dest
+                 /// in
+                 help1 = double(CurrentCommEndsTotal[destination]);
+                 help2 = double(Degree[vertex + t*Nodes]);
+                 ratiovalue = ratiovalue - LogFunction(help1 + help2) + LogFunction(help1);
+                 
+                 /// out
+                 help1 = double(CurrentCommStubsTotal[destination]);
+                 help2 = double(outDegree[vertex + t*Nodes]);
+                 ratiovalue = ratiovalue - LogFunction(help1 + help2) + LogFunction(help1);
+                 
+             }
              
         }
         
@@ -1102,7 +1168,10 @@ void UpdateMatrices(int vertex, int option, int from, int destination)
                 
                 CurrentCommStubs[from + t*MaxComms] -= Degree[vertex + t*Nodes];
                 CurrentCommStubs[destination + t*MaxComms] += Degree[vertex + t*Nodes];
-            
+                CurrentCommStubsTotal[from] -= outDegree[vertex + t*Nodes] ;
+                CurrentCommStubsTotal[destination] += outDegree[vertex + t*Nodes];
+
+                
                 for(i=0; i < ActualDiffComms[t]; i++)
                 {
                     if((NeighborIndex[i + t*MaxComms] != from) && (NeighborIndex[i + t*MaxComms] != destination))
@@ -1144,6 +1213,8 @@ void UpdateMatrices(int vertex, int option, int from, int destination)
                 
                 BestCommStubs[from + t*MaxComms] -= Degree[vertex + t*Nodes];
                 BestCommStubs[destination + t*MaxComms] += Degree[vertex + t*Nodes];
+                BestCommStubsTotal[from] -= Degree[vertex + t*Nodes];
+                BestCommStubsTotal[destination] += Degree[vertex + t*Nodes];
                 
                 for(i=0; i < ActualDiffComms[t]; i++)
                 {
@@ -1193,8 +1264,13 @@ void UpdateMatrices(int vertex, int option, int from, int destination)
                 
                 CurrentCommStubs[from + t*MaxComms] -= outDegree[vertex + t*Nodes] ;
                 CurrentCommStubs[destination + t*MaxComms] += outDegree[vertex + t*Nodes];
+                CurrentCommStubsTotal[from] -= outDegree[vertex + t*Nodes] ;
+                CurrentCommStubsTotal[destination] += outDegree[vertex + t*Nodes];
                 CurrentCommEnds[from + t*MaxComms] -= Degree[vertex+ t*Nodes];
                 CurrentCommEnds[destination + t*MaxComms] += Degree[vertex + t*Nodes];
+                CurrentCommEndsTotal[from] -= Degree[vertex+ t*Nodes];
+                CurrentCommEndsTotal[destination] += Degree[vertex + t*Nodes];
+              
             
                 for(i=0; i < ActualDiffComms[t]; i++)
                 {
@@ -1255,8 +1331,12 @@ void UpdateMatrices(int vertex, int option, int from, int destination)
                 
                 BestCommStubs[from + t*MaxComms] -= outDegree[vertex + t*Nodes] ;
                 BestCommStubs[destination + t*MaxComms] += outDegree[vertex + t*Nodes];
+                BestCommStubsTotal[from] -= outDegree[vertex + t*Nodes] ;
+                BestCommStubsTotal[destination] += outDegree[vertex + t*Nodes];
                 BestCommEnds[from + t*MaxComms] -= Degree[vertex+ t*Nodes];
                 BestCommEnds[destination + t*MaxComms] += Degree[vertex + t*Nodes];
+                BestCommEndsTotal[from] -= Degree[vertex+ t*Nodes];
+                BestCommEndsTotal[destination] += Degree[vertex + t*Nodes];
                 
                 
                 for(i=0; i < ActualDiffComms[t]; i++)
@@ -1359,6 +1439,9 @@ void Setup(int Nodes, int MaxComms, bool Directed) {  //, const IntegerVector se
     Count.assign(T*Nodes, 0);  // Degree of nodes in the network or in Degree if directed
     LastEmpty.assign(T*Nodes, 0);
     ActualDiffComms.assign(T, 0);
+    CurrentCommStubsTotal.assign(MaxComms, 0.0);
+    BestCommStubsTotal.assign(MaxComms, 0.0);
+
     
     if (Directed)
     {
@@ -1377,6 +1460,9 @@ void Setup(int Nodes, int MaxComms, bool Directed) {  //, const IntegerVector se
         outTempNeighborSet.assign(MaxComms, 0.0);
         
         outActualDiffComms.assign(T, 0);
+        
+        CurrentCommEndsTotal.assign(MaxComms, 0.0);
+        BestCommEndsTotal.assign(MaxComms, 0.0);
     }
     
     //not time-dependent
@@ -1771,8 +1857,12 @@ void InitializeKLt(List AdjListT, List AdjListWeightT)
     
     // initialize - these apply to directed and undirected
     
-    for(i=0; i < MaxComms; i++)
-        { BestCommVertices[i] = 0;}
+    for(i=0; i < MaxComms; i++) {
+        BestCommVertices[i] = 0;
+        BestCommStubsTotal[i] = 0;
+        if (Directed)
+            BestCommEndsTotal[i] = 0;
+    }
     
     for(i=0; i < Nodes; i++)
     {
@@ -1800,6 +1890,7 @@ void InitializeKLt(List AdjListT, List AdjListWeightT)
             for(i=0; i < Nodes; i++)
             {
                 BestCommStubs[BestState[i] + t*MaxComms] += Degree[i + t*Nodes]; ///stubs will add to twice the total edge weight
+                BestCommStubsTotal[BestState[i]] += Degree[i + t*Nodes];
             }
             
             /// sum = 0;
@@ -1842,6 +1933,9 @@ void InitializeKLt(List AdjListT, List AdjListWeightT)
                 
                 BestCommStubs[BestState[i] + t*MaxComms] += outDegree[i +  t*Nodes];
                 BestCommEnds[BestState[i] + t*MaxComms] += Degree[i + t*Nodes];
+                
+                BestCommStubsTotal[BestState[i]] += outDegree[i + t*Nodes];
+                BestCommEndsTotal[BestState[i]] += Degree[i + t*Nodes];
             }
             
             // sum = 0;

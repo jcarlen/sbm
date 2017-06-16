@@ -18,7 +18,7 @@
 #R Function
 # need to pass AdjList objects to cpp
 
-KLt <- function(edgelist.time, klPerNetwork = 50, maxComms = 2, seedComms = NULL, directed = F, degreeCorrect = F, seed = NULL) {
+KLt <- function(edgelist.time, klPerNetwork = 50, maxComms = 2, seedComms = NULL, directed = F, degreeCorrect = 0, seed = NULL) {
     
     if (!is.list(edgelist.time)) {
         stop("edgelist.time should be a list where each entry is an edgelist of at least two columns, three if weights are supplied")
@@ -77,7 +77,7 @@ KLt <- function(edgelist.time, klPerNetwork = 50, maxComms = 2, seedComms = NULL
         stop("Directed should be FALSE or TRUE (0 or 1 OK)")
     }
     
-    degreeCorrect = as.numeric(degreeCorrect) # relic of Karrer and Newman code to have degreeCorrect be 0|1
+    degreeCorrect = as.numeric(degreeCorrect) #to handle T/F input
     
     #seed?
     
