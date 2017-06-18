@@ -95,6 +95,8 @@ std::vector<double> CurrentEdgeMatrix;
 
 std::vector<int> ActualDiffComms;
 std::vector<int> outActualDiffComms;
+std::vector<int> ActualDiffCommsVertex;
+std::vector<int> outActualDiffCommsVertex;
 std::vector<double> SelfEdgeCounter;
 
 int Nodes, MaxComms, KLPerNetwork, DegreeCorrect, T;
@@ -153,6 +155,7 @@ List sbmFit(const IntegerMatrix & edgelist, const int maxComms, const int degree
     Degree.assign(Nodes, 0.0);  // Degree of nodes in the network or in Degree if directed
     Count.assign(Nodes, 0);  // Degree of nodes in the network or in Degree if directed
     LastEmpty.assign(Nodes, 0);
+    SelfEdgeCounter.assign(Nodes, 0);
     
     BestCommVertices.assign(MaxComms, 0); //[MaxComms]
     BestCommStubs.assign(MaxComms, 0.0); //if directed, keeps tally of edges originating in a class
@@ -179,6 +182,9 @@ List sbmFit(const IntegerMatrix & edgelist, const int maxComms, const int degree
             Degree[edgelist(i, 1)]+=weights[i];
             Count[edgelist(i, 0)]++;
             Count[edgelist(i, 1)]++;
+            if (edgelist(i, 0) == edgelist(i, 1)) {
+                SelfEdgeCounter[edgelist(i, 0)] += weights[i];
+            }
             
         }
     }
@@ -209,6 +215,9 @@ List sbmFit(const IntegerMatrix & edgelist, const int maxComms, const int degree
             outDegree[edgelist(i, 0)]+=weights[i];
             Count[edgelist(i, 1)]++;
             outCount[edgelist(i, 0)]++;
+            if (edgelist(i, 0) == edgelist(i, 1)) {
+                SelfEdgeCounter[edgelist(i, 0)] += weights[i];
+            }
         }
         
         outmaxCount = *std::max_element(outCount.begin(), outCount.end());
@@ -393,6 +402,7 @@ void RunKL(IntegerMatrix AdjList, NumericMatrix AdjListWeight, IntegerMatrix out
                 // computing this first makes this more efficient
                 // zero indicates run with current communities
                 
+                //Rcout << "Start ComputeNeighborSet, i,j: " << i << ", " << j<< std::endl;
                 ComputeNeighborSet(ChangeSet[j], 0, AdjList, AdjListWeight, outAdjList, outAdjListWeight, 0); //time is 0. time steps is 1
                 //Rcout << "Finished ComputeNeighborSet" << std::endl;
                 
@@ -426,10 +436,13 @@ void RunKL(IntegerMatrix AdjList, NumericMatrix AdjListWeight, IntegerMatrix out
             
             // now we move it, first recording the current neighbors so that
             // we can update the matrices properly
+            //Rcout << "Compute Neighbor Set of ChangeSet[MaxVertex]" << ChangeSet[MaxVertex] << std::endl;
             ComputeNeighborSet(ChangeSet[MaxVertex], 0, AdjList, AdjListWeight, outAdjList, outAdjListWeight, 0);
             
             // This updates the matrices to represent the vertices new state
             UpdateMatrices(ChangeSet[MaxVertex], 0, CurrentState[ChangeSet[MaxVertex]], MaxPriority);
+            
+            //Rcout << "Updated Matrices" << std::endl;
             
             CurrentState[ChangeSet[MaxVertex]] = MaxPriority;
             
@@ -452,6 +465,8 @@ void RunKL(IntegerMatrix AdjList, NumericMatrix AdjListWeight, IntegerMatrix out
                 MaxScore = CurrentScore;
                 MaxIndex = i;
             }
+            
+            Rcout << "end i loop" << std::endl;
         }
         
         // now we update BestState if a change resulted in a higher maximum
@@ -594,6 +609,7 @@ double ComputeInitialScore()
     int i,j, t;
     double sum = 0;
     double tol = std::numeric_limits<double>::epsilon();
+    long double tolerance = 0.00000001;
     
     if ( !Directed ) // this actually returns 1/2 the unnormalized log-likelihood listed in the paper
     {
@@ -615,8 +631,7 @@ double ComputeInitialScore()
                 
                 for(j=i; j < MaxComms; j++)
                 {
-                    if (DegreeCorrect == 2)
-                    {
+                    if (DegreeCorrect == 2) {
                         if (BestCommStubsTotal[i]*BestCommStubsTotal[j] > tol)
                             sum -= BestEdgeMatrix[i*MaxComms+j + t*MaxComms*MaxComms]*log(BestCommStubsTotal[i]*BestCommStubsTotal[j]);
                     } else {
@@ -625,9 +640,8 @@ double ComputeInitialScore()
                             sum = sum + LogFunction(BestEdgeMatrix[i*MaxComms+j + t*MaxComms*MaxComms]);
                         if (i==j)
                             sum = sum + .5*LogFunction(2*BestEdgeMatrix[i*MaxComms+j + t*MaxComms*MaxComms]);
-                            /// reminder: twice the diag of BestEdgeMatrix + everything else in the matrix once should = 2x edges
-                            ///           we halved the weights when entering them into diag blocks, which is why *2 next line
-                            ///           the .5 is because we're doing half the unnormalized log likelihoo
+                            /// reminder: 2 * diag of BestEdgeMatrix + everything else in the matrix once should = 2x edges
+                            ///           the 2* here is so i -> j = j -> i and both counted if i.j in same community
                     }
                 }
             }
@@ -646,7 +660,8 @@ double ComputeInitialScore()
             {
                 for(j = 0; j < MaxComms; j++)
                 {
-                    
+                    if (BestEdgeMatrix[i*MaxComms+j + t*MaxComms*MaxComms] < 0 )
+                        Rcout << "BestEdgeMatrix[i*MaxComms+j + t*MaxComms*MaxComms] " << BestEdgeMatrix[i*MaxComms+j + t*MaxComms*MaxComms] << std::endl;
                     sum = sum + LogFunction(BestEdgeMatrix[i*MaxComms+j + t*MaxComms*MaxComms]);
                     
                     double bestval;
@@ -663,7 +678,7 @@ double ComputeInitialScore()
                         bestval = BestCommStubsTotal[i]*BestCommEndsTotal[j];
                     }
                     
-                    if ( bestval > 0 && BestEdgeMatrix[i*MaxComms+j + t*MaxComms*MaxComms] > 0)
+                    if ( bestval > tolerance && BestEdgeMatrix[i*MaxComms+j + t*MaxComms*MaxComms] > tolerance)
                         sum = sum - BestEdgeMatrix[i*MaxComms+j + t*MaxComms*MaxComms] * log(bestval);
                 }
                 
@@ -692,7 +707,6 @@ void ComputeNeighborSet(int vertex, int option, IntegerMatrix AdjList, NumericMa
     int i;
     int neighbor;
     double tol = std::numeric_limits<double>::epsilon();
-    SelfEdgeCounter.assign(T, 0.0);
     
     if ( !Directed )
     {
@@ -702,14 +716,12 @@ void ComputeNeighborSet(int vertex, int option, IntegerMatrix AdjList, NumericMa
         {
             TempNeighborIndex[i] = i;
             TempNeighborSet[i] = 0;
-            NeighborIndex[i + time*MaxComms] = i;
+            NeighborSet[i + time*MaxComms] = 0;
+            outNeighborSet[i + time*MaxComms] = 0;
+            NeighborIndex[i + time*MaxComms] = 0;
             NeighborSet[i + time*MaxComms] = 0;
         }
 
-        // NOTE SINCE A SELF-EDGE SHOWS UP TWICE IN THE ADJLIST THIS DOUBLE
-        // COUNTS THESE EDGES, WE RECORD THE NUMBER OF TIMES THIS HAPPENS
-        // IN A SEPARATE VARIABLE AND THEN DIVIDE BY TWO
-        
         for(i=0; i < Count[vertex + time*Nodes]; i++)
         {
             
@@ -724,11 +736,14 @@ void ComputeNeighborSet(int vertex, int option, IntegerMatrix AdjList, NumericMa
                 if(option == 1)
                     TempNeighborSet[BestState[neighbor]] += AdjListWeight(vertex, i);
             }
-            if(neighbor == vertex)
-                SelfEdgeCounter[time] += AdjListWeight(vertex, i);
+            //if(neighbor == vertex)
+              //  SelfEdgeCounter[time*Nodes + vertex] += AdjListWeight(vertex, i);
         }
-
-        SelfEdgeCounter[time] = SelfEdgeCounter[time]/2; /// ONLY if undirected
+        
+        // NOTE SINCE A SELF-EDGE SHOWS UP TWICE IN THE ADJLIST THIS DOUBLE
+        // COUNTS THESE EDGES, WE RECORD THE NUMBER OF TIMES THIS HAPPENS
+        // IN A SEPARATE VARIABLE AND THEN DIVIDE BY TWO
+        //SelfEdgeCounter[time*Nodes + vertex] = SelfEdgeCounter[time*Nodes + vertex]/2; /// ONLY if undirected
         
         ActualDiffComms[time] = 0;
         for(i=0; i < MaxComms; i++)
@@ -746,19 +761,19 @@ void ComputeNeighborSet(int vertex, int option, IntegerMatrix AdjList, NumericMa
     
     if ( Directed )
     {
-         //Rcout << "ComputeNeighborSet_Directed" << std::endl;
+        
          for(i=0; i < MaxComms; i++)
          {
              TempNeighborIndex[i] = i;
              TempNeighborSet[i] = 0;
              outTempNeighborIndex[i] = i;
              outTempNeighborSet[i] = 0;
-             NeighborIndex[i + time*MaxComms] = i;
+             
+             NeighborIndex[i + time*MaxComms] = 0;
+             outNeighborIndex[i + time*MaxComms] = 0;
              NeighborSet[i + time*MaxComms] = 0;
-             outNeighborIndex[i + time*MaxComms] = i;
              outNeighborSet[i + time*MaxComms] = 0;
          }
-     
      
          for(i=0; i < Count[vertex + time*Nodes]; i++)
          {
@@ -771,8 +786,8 @@ void ComputeNeighborSet(int vertex, int option, IntegerMatrix AdjList, NumericMa
                  if(option == 1)
                      TempNeighborSet[BestState[neighbor]] += AdjListWeight(vertex, i);
              }
-             if(neighbor == vertex)
-                 SelfEdgeCounter[time] += SelfTwice * AdjListWeight(vertex, i);  /// count self-edges ONCE unless selftwice is 2
+            // if(neighbor == vertex)
+                 //SelfEdgeCounter[time] += SelfTwice * AdjListWeight(vertex, i);  /// count self-edges ONCE unless selftwice is 2
          }
          
          for(i=0; i < outCount[vertex + time*Nodes]; i++)
@@ -788,7 +803,7 @@ void ComputeNeighborSet(int vertex, int option, IntegerMatrix AdjList, NumericMa
              }
      
          }
-     
+        
          ActualDiffComms[time] = 0;
          for(i=0; i < MaxComms; i++)
          {
@@ -810,7 +825,7 @@ void ComputeNeighborSet(int vertex, int option, IntegerMatrix AdjList, NumericMa
                  outActualDiffComms[time]++;
              }
          }
-     
+        
      return;
      }
 }
@@ -826,11 +841,14 @@ double ComputeProposal(int vertex, int from, int destination)
     double help3;
     double help4;
     
+    long double tolerance = 0.00000001;
+    
     if(from == destination)
         return 0;
     
     for (int t = 0; t < T; t ++)
     {
+        //Rcout << "Time is " << t << std::endl;
         fromcount = 0;
         destcount = 0;
         outfromcount = 0;
@@ -840,13 +858,10 @@ double ComputeProposal(int vertex, int from, int destination)
          {
              
              // if the degree of the vertex is zero we know nothing about it
-             // in this case we don't ever change its community
-             // at the end we put all degree zeroes into their own group
-             if(DegreeCorrect >= 1)
-             {
-                 if(Degree[vertex + t*Nodes] == 0)
-                     return 0;
-             }
+             // in this case we don't ever change its community, put all degree zeroes into their own group
+             if(DegreeCorrect >= 1 && (Degree[vertex + t*Nodes] <= tolerance))
+                 return 0;
+             
              
              // we first add up all the cross-terms (between communities that are not from / destination)
              for(i=0; i < ActualDiffComms[t]; i++)
@@ -861,15 +876,16 @@ double ComputeProposal(int vertex, int from, int destination)
              
                         help1 = double(CurrentEdgeMatrix[from * MaxComms + NeighborIndex[i + t*MaxComms] + t*MaxComms*MaxComms]);
                         help2 = double(CurrentEdgeMatrix[destination * MaxComms + NeighborIndex[i + t*MaxComms] + t*MaxComms*MaxComms]);
-                        help3 = double(NeighborSet[i + t*MaxComms] + t*MaxComms);
+                        help3 = double(NeighborSet[i + t*MaxComms]);
+                     
                         if (help1 - help3 < 0) std::cout << "help1-help3  " << help1-help3 << std::endl;
                         if (help2 < 0) std::cout << "help2 " << help2 << std::endl;
                         if (help3 < 0) std::cout << "help3 " << help3 << std::endl;
                      
-                     
                         ratiovalue = ratiovalue + LogFunction(help1-help3) - LogFunction(help1);
                         ratiovalue = ratiovalue + LogFunction(help2+help3) - LogFunction(help2);
-                 }
+                        //Rcout << "vertex, " << vertex << "ratiovalue1 " << ratiovalue << std::endl;
+                  }
              
                  if(NeighborIndex[i + t*MaxComms] == from)
                      fromcount = NeighborSet[i + t*MaxComms];
@@ -879,13 +895,13 @@ double ComputeProposal(int vertex, int from, int destination)
              }
              
              // now we add in the term corresponding to from / dest
-             
              help1 = double(CurrentEdgeMatrix[from * MaxComms + destination + t*MaxComms*MaxComms]);
              help2 = double(fromcount-destcount);
              if (help1 + help2 < 0) std::cout << "help1 + help2  " << help1 + help2 << std::endl;
              if (help1 < 0) std::cout << "help1 " << help1 << std::endl;
              
              ratiovalue = ratiovalue + LogFunction(help1 + help2) - LogFunction(help1);
+             //Rcout << "vertex, " << vertex << "ratiovalue2 " << ratiovalue << std::endl;
              
              // now we add in the terms corresponding to from
              if(DegreeCorrect == 0)
@@ -896,6 +912,7 @@ double ComputeProposal(int vertex, int from, int destination)
                  if(CurrentCommVertices[from] > 1) {
                      ratiovalue = ratiovalue - (help1-help2)*log(double(CurrentCommVertices[from]-1));
                      ratiovalue = ratiovalue + help1*log(double(CurrentCommVertices[from]));
+                     //Rcout << "vertex, " << vertex << "ratiovalue3 " << ratiovalue << std::endl;
                  }
              }
              
@@ -906,29 +923,29 @@ double ComputeProposal(int vertex, int from, int destination)
                  
                  //if (help1 - help2 < 0) Rcout << "help1 - help2  " << help1 - help2 << "  help1  " << help1 << "  help2  " << help2 << std::endl;
                  ratiovalue = ratiovalue - LogFunction(help1 - help2) + LogFunction(help1);
+                 //Rcout << "vertex, " << vertex << "ratiovalue4 " << ratiovalue << std::endl;
              }
              
              if(DegreeCorrect == 2)
              {
                  help1 = double(CurrentCommStubsTotal[from]);
                  help2 = double(Degree[vertex + t*Nodes]);
-                 
-                 //if (help1 - help2 < 0) Rcout << "help1 - help2  " << help1 - help2 << "  help1  " << help1 << "  help2  " << help2 << std::endl;
+                 if (help1 - help2 < 0) Rcout << "help1 - help2  " << help1 - help2 << "  help1  " << help1 << "  help2  " << help2 << std::endl;
                  ratiovalue = ratiovalue - LogFunction(help1 - help2) + LogFunction(help1);
              }
              
              // now we do from/from
              help1 = double(2*CurrentEdgeMatrix[from * MaxComms + from + t*MaxComms*MaxComms]);
-             help2 = double(2*SelfEdgeCounter[t] + 2*fromcount);
+             help2 = double(2*SelfEdgeCounter[t*Nodes + vertex] + 2*fromcount);
              
-             /*if (SelfEdgeCounter[t] > 0) {
-                 std::cout << "SelfEdgeCounter, t = " << t << ", vertex = " << vertex << ", SEC = " << SelfEdgeCounter[t] << std::endl;
+             /*if (SelfEdgeCounter[t*Nodes + vertex] > 0.0000000001) {
+                 std::cout << "SelfEdgeCounter, t = " << t << ", vertex = " << vertex << ", SEC = " << SelfEdgeCounter[t*Nodes + vertex] << std::endl;
              }*/
-             
              if (help1 - help2 < 0) std::cout << "help1 - help2 (2)  " << help1 - help2 << std::endl;
              if (help1 < 0) std::cout << "help1 (2) " << help1 << std::endl;
              
              ratiovalue = ratiovalue + .5*LogFunction(help1 - help2) - .5*LogFunction(help1);
+             //Rcout << "vertex, " << vertex << "ratiovalue5 " << ratiovalue << std::endl;
              
              // now we add in the terms corresponding to dest
              if(DegreeCorrect == 0)
@@ -945,10 +962,12 @@ double ComputeProposal(int vertex, int from, int destination)
                  help1 = double(CurrentCommStubs[destination + t*MaxComms]);
                  help2 = double(Degree[vertex + t*Nodes]);
                  ratiovalue = ratiovalue - LogFunction(help1 + help2) + LogFunction(help1);
+                 //Rcout << "vertex, " << vertex << "ratiovalue6 " << ratiovalue << std::endl;
              }
             
              if(DegreeCorrect == 2)
              {
+                 
                  help1 = double(CurrentCommStubsTotal[destination + t*MaxComms]);
                  help2 = double(Degree[vertex + t*Nodes]);
                  ratiovalue = ratiovalue - LogFunction(help1 + help2) + LogFunction(help1);
@@ -957,14 +976,14 @@ double ComputeProposal(int vertex, int from, int destination)
              // and now dest/dest
 
              help1 = double(2*CurrentEdgeMatrix[destination * MaxComms + destination + t*MaxComms*MaxComms]);
-             help2 = double(2*SelfEdgeCounter[t] + 2*destcount);
+             help2 = double(2*SelfEdgeCounter[t*Nodes + vertex] + 2*destcount);
              
              if (help1 + help2 < 0) std::cout << "help1 + help2  (3)" << help1 + help2 << std::endl;
              if (help1 < 0) std::cout << "help1 (3)" << help1 << std::endl;
              
              ratiovalue = ratiovalue + .5*LogFunction(help1 + help2) - .5*LogFunction(help1);
-             
-             
+             //Rcout << "vertex, " << vertex << "ratiovalue " << ratiovalue << std::endl;
+    
          }
         
          if (Directed)
@@ -974,11 +993,8 @@ double ComputeProposal(int vertex, int from, int destination)
              // if the total degree of the vertex is zero we know nothing about it
              // in this case we don't ever change its community
              // at the end we put all degree zeroes into their own group
-             if(DegreeCorrect >= 1)
-             {
-                 if(Degree[vertex + t*Nodes] == 0 && outDegree[vertex + t*Nodes] == 0)
-                     return 0;
-             }
+             if(DegreeCorrect >= 1 && (Degree[vertex + t*Nodes] == 0 && outDegree[vertex + t*Nodes] == 0))
+                 return 0;
          
              // 1) Communities going into the vertex
              // we first add up all the cross-terms (between communities that are not from / destination)
@@ -991,7 +1007,7 @@ double ComputeProposal(int vertex, int from, int destination)
                  {
                      help1 = CurrentEdgeMatrix[NeighborIndex[i + t*MaxComms] * MaxComms + from + t*MaxComms*MaxComms];
                      help2 = CurrentEdgeMatrix[NeighborIndex[i + t*MaxComms] * MaxComms + destination + t*MaxComms*MaxComms];
-                     help3 = NeighborSet[i];
+                     help3 = NeighborSet[i + t*MaxComms];
              
                      ratiovalue = ratiovalue + LogFunction(help1-help3) - LogFunction(help1);
                      ratiovalue = ratiovalue + LogFunction(help2+help3) - LogFunction(help2);
@@ -1037,12 +1053,18 @@ double ComputeProposal(int vertex, int from, int destination)
              help3 = double(CurrentEdgeMatrix[destination * MaxComms + from + t*MaxComms*MaxComms]); /// total black to white
              help4 = double(outfromcount-destcount); /// white to white - black to white
             
+             if (help1 + help2 < 0) std::cout << "help1 + help2  (4)" << help1 + help2 << std::endl;
+             if (help3 + help4 < 0) std::cout << "help3 + help4  (4)" << help3 + help4 << std::endl;
+             
+             if (help1 < 0) std::cout << "help1 (4)" << help1 << std::endl;
+             if (help3 < 0) std::cout << "help3 (4)" << help3 << std::endl;
+             
              ratiovalue = ratiovalue + LogFunction(help1 + help2) - LogFunction(help1); /// w 2 b - self-edges already excluded
              ratiovalue = ratiovalue + LogFunction(help3 + help4) - LogFunction(help3); /// b 2 w
              
              // now we do from/from
              help1 = double(CurrentEdgeMatrix[from * MaxComms + from + t*MaxComms*MaxComms]);
-             help2 = double(SelfEdgeCounter[t] + fromcount + outfromcount);
+             help2 = double(SelfEdgeCounter[t*Nodes + vertex] + fromcount + outfromcount);
              
              //std::cout << "SelfEdgeCounter, t = " << t << ", SEC = " << SelfEdgeCounter[t] << std::endl;
              if (help1 - help2 < 0) std::cout << "help1 - help2 (2)  " << help1 - help2 << std::endl;
@@ -1053,7 +1075,10 @@ double ComputeProposal(int vertex, int from, int destination)
              
              // and now dest/dest
              help1 = double(CurrentEdgeMatrix[destination * MaxComms + destination + t*MaxComms*MaxComms]);
-             help2 = double(SelfEdgeCounter[t] + destcount + outdestcount);
+             help2 = double(SelfEdgeCounter[t*Nodes + vertex] + destcount + outdestcount);
+             
+             if (help1 < 0) std::cout << "help1 (5) " << help1 << std::endl;
+             
              ratiovalue = ratiovalue + LogFunction(help1 + help2) - LogFunction(help1);
              
              if(DegreeCorrect == 0)
@@ -1093,11 +1118,17 @@ double ComputeProposal(int vertex, int from, int destination)
                  ///in
                  help1 = double(CurrentCommEnds[from + t*MaxComms]);
                  help2 = double(Degree[vertex + t*Nodes]);
+                 if (help1 - help2 < 0) std::cout << "help1 - help2 *" << help1 - help2 << std::endl;
+                 if (help1 < 0) std::cout << "help1 * " << help1 << std::endl;
+                 
                  ratiovalue = ratiovalue - LogFunction(help1 - help2) + LogFunction(help1);
                  
                  ///out
                  help1 = double(CurrentCommStubs[from + t*MaxComms]);
                  help2 = double(outDegree[vertex + t*Nodes]);
+                 if (help1 - help2 < 0) std::cout << "help1 - help2 **" << help1 - help2 << std::endl;
+                 if (help1 < 0) std::cout << "help1 ** " << help1 << std::endl;
+                 
                  ratiovalue = ratiovalue - LogFunction(help1 - help2) + LogFunction(help1);
                  
                  // now we add in the terms corresponding to dest
@@ -1119,11 +1150,13 @@ double ComputeProposal(int vertex, int from, int destination)
                  ///in
                  help1 = double(CurrentCommEndsTotal[from]);
                  help2 = double(Degree[vertex + t*Nodes]);
+                 if (help1 - help2 < 0) Rcout << "Help1 - Help2  " << help1 - help2 << "  help1  " << help1 << "  help2  " << help2 << std::endl;
                  ratiovalue = ratiovalue - LogFunction(help1 - help2) + LogFunction(help1);
                  
                  ///out
                  help1 = double(CurrentCommStubsTotal[from]);
                  help2 = double(outDegree[vertex + t*Nodes]);
+                 if (help1 - help2 < 0) Rcout << "HELP1 - HELP2  " << help1 - help2 << "  help1  " << help1 << "  help2  " << help2 << std::endl;
                  ratiovalue = ratiovalue - LogFunction(help1 - help2) + LogFunction(help1);
                  
                  // now we add in the terms corresponding to dest
@@ -1142,7 +1175,7 @@ double ComputeProposal(int vertex, int from, int destination)
         }
         
     }
-        return ratiovalue;
+    return ratiovalue;
 }
 
 void UpdateMatrices(int vertex, int option, int from, int destination)
@@ -1163,14 +1196,14 @@ void UpdateMatrices(int vertex, int option, int from, int destination)
                 
                 fromcount = 0;
                 destcount = 0;
-                outfromcount = 0;
-                outdestcount = 0;
                 
                 CurrentCommStubs[from + t*MaxComms] -= Degree[vertex + t*Nodes];
                 CurrentCommStubs[destination + t*MaxComms] += Degree[vertex + t*Nodes];
-                CurrentCommStubsTotal[from] -= outDegree[vertex + t*Nodes] ;
-                CurrentCommStubsTotal[destination] += outDegree[vertex + t*Nodes];
-
+                
+                if (DegreeCorrect == 2) {
+                    CurrentCommStubsTotal[from] -= Degree[vertex + t*Nodes] ;
+                    CurrentCommStubsTotal[destination] += Degree[vertex + t*Nodes];
+                }
                 
                 for(i=0; i < ActualDiffComms[t]; i++)
                 {
@@ -1191,8 +1224,8 @@ void UpdateMatrices(int vertex, int option, int from, int destination)
                         destcount = NeighborSet[i + t*MaxComms];
                 }
                 
-                CurrentEdgeMatrix[from * MaxComms + from + t*MaxComms*MaxComms] -= (SelfEdgeCounter[t] + fromcount);
-                CurrentEdgeMatrix[destination * MaxComms + destination + t*MaxComms*MaxComms] += (SelfEdgeCounter[t] + destcount);
+                CurrentEdgeMatrix[from * MaxComms + from + t*MaxComms*MaxComms] -= (SelfEdgeCounter[t*Nodes + vertex] + fromcount);
+                CurrentEdgeMatrix[destination * MaxComms + destination + t*MaxComms*MaxComms] += (SelfEdgeCounter[t*Nodes + vertex] + destcount);
                 CurrentEdgeMatrix[from * MaxComms + destination + t*MaxComms*MaxComms] += (fromcount - destcount);
                 CurrentEdgeMatrix[destination * MaxComms + from + t*MaxComms*MaxComms] += (fromcount - destcount);
                 
@@ -1208,13 +1241,14 @@ void UpdateMatrices(int vertex, int option, int from, int destination)
                 
                 fromcount = 0;
                 destcount = 0;
-                outfromcount = 0;
-                outdestcount = 0;
                 
                 BestCommStubs[from + t*MaxComms] -= Degree[vertex + t*Nodes];
                 BestCommStubs[destination + t*MaxComms] += Degree[vertex + t*Nodes];
-                BestCommStubsTotal[from] -= Degree[vertex + t*Nodes];
-                BestCommStubsTotal[destination] += Degree[vertex + t*Nodes];
+                
+                if (DegreeCorrect == 2) {
+                    BestCommStubsTotal[from] -= Degree[vertex + t*Nodes];
+                    BestCommStubsTotal[destination] += Degree[vertex + t*Nodes];
+                }
                 
                 for(i=0; i < ActualDiffComms[t]; i++)
                 {
@@ -1235,8 +1269,8 @@ void UpdateMatrices(int vertex, int option, int from, int destination)
                         destcount = NeighborSet[i + t*MaxComms];
                 }
                 
-                BestEdgeMatrix[from * MaxComms + from + t*MaxComms*MaxComms] -= (SelfEdgeCounter[t] + fromcount);
-                BestEdgeMatrix[destination * MaxComms + destination + t*MaxComms*MaxComms] += (SelfEdgeCounter[t] + destcount);
+                BestEdgeMatrix[from * MaxComms + from + t*MaxComms*MaxComms] -= (SelfEdgeCounter[t*Nodes + vertex] + fromcount);
+                BestEdgeMatrix[destination * MaxComms + destination + t*MaxComms*MaxComms] += (SelfEdgeCounter[t*Nodes + vertex] + destcount);
                 BestEdgeMatrix[from * MaxComms + destination + t*MaxComms*MaxComms] += (fromcount - destcount);
                 BestEdgeMatrix[destination * MaxComms + from + t*MaxComms*MaxComms] += (fromcount - destcount);
                 
@@ -1264,22 +1298,24 @@ void UpdateMatrices(int vertex, int option, int from, int destination)
                 
                 CurrentCommStubs[from + t*MaxComms] -= outDegree[vertex + t*Nodes] ;
                 CurrentCommStubs[destination + t*MaxComms] += outDegree[vertex + t*Nodes];
-                CurrentCommStubsTotal[from] -= outDegree[vertex + t*Nodes] ;
-                CurrentCommStubsTotal[destination] += outDegree[vertex + t*Nodes];
                 CurrentCommEnds[from + t*MaxComms] -= Degree[vertex+ t*Nodes];
                 CurrentCommEnds[destination + t*MaxComms] += Degree[vertex + t*Nodes];
-                CurrentCommEndsTotal[from] -= Degree[vertex+ t*Nodes];
-                CurrentCommEndsTotal[destination] += Degree[vertex + t*Nodes];
-              
+                
+                if (DegreeCorrect == 2) {
+                    CurrentCommStubsTotal[from] -= outDegree[vertex + t*Nodes] ;
+                    CurrentCommStubsTotal[destination] += outDegree[vertex + t*Nodes];
+                    CurrentCommEndsTotal[from] -= Degree[vertex+ t*Nodes];
+                    CurrentCommEndsTotal[destination] += Degree[vertex + t*Nodes];
+                }
             
                 for(i=0; i < ActualDiffComms[t]; i++)
                 {
                     if((NeighborIndex[i] != from) && (NeighborIndex[i] != destination))
                     {
-                        CurrentEdgeMatrix[NeighborIndex[i + t*MaxComms] * MaxComms + from + t*MaxComms*MaxComms] -=
-                        NeighborSet[i + t*MaxComms];
-                        CurrentEdgeMatrix[NeighborIndex[i + t*MaxComms] * MaxComms + destination + t*MaxComms*MaxComms] +=
-                        NeighborSet[i + t*MaxComms];
+                        CurrentEdgeMatrix[NeighborIndex[i + t*MaxComms] * MaxComms + from + t*MaxComms*MaxComms] -= NeighborSet[i + t*MaxComms];
+                        //if (CurrentEdgeMatrix[NeighborIndex[i + t*MaxComms] * MaxComms + from + t*MaxComms*MaxComms] < 0)
+                          //  Rcout << "Negative Here " << CurrentEdgeMatrix[NeighborIndex[i + t*MaxComms] * MaxComms + from + t*MaxComms*MaxComms] << " " <<std::endl;
+                        CurrentEdgeMatrix[NeighborIndex[i + t*MaxComms] * MaxComms + destination + t*MaxComms*MaxComms] += NeighborSet[i + t*MaxComms];
                     }
                     
                     if(NeighborIndex[i + t*MaxComms] == from)
@@ -1295,6 +1331,8 @@ void UpdateMatrices(int vertex, int option, int from, int destination)
                     if((outNeighborIndex[i + t*MaxComms] != from) && (outNeighborIndex[i + t*MaxComms] != destination))
                     {
                         CurrentEdgeMatrix[from * MaxComms + outNeighborIndex[i + t*MaxComms] + t*MaxComms*MaxComms] -= outNeighborSet[i + t*MaxComms];
+                        //if (CurrentEdgeMatrix[from * MaxComms + outNeighborIndex[i + t*MaxComms] + t*MaxComms*MaxComms] < 0)
+                          //  Rcout << "Negative Here 2" << CurrentEdgeMatrix[from * MaxComms + outNeighborIndex[i + t*MaxComms] + t*MaxComms*MaxComms] << " " <<std::endl;
                         CurrentEdgeMatrix[destination * MaxComms + outNeighborIndex[i + t*MaxComms] + t*MaxComms*MaxComms] += outNeighborSet[i + t*MaxComms];
                     }
                     
@@ -1306,15 +1344,36 @@ void UpdateMatrices(int vertex, int option, int from, int destination)
                     
                 }
                 
-                CurrentEdgeMatrix[from * MaxComms + from + t*MaxComms*MaxComms] -=
-                (fromcount + outfromcount + SelfEdgeCounter[t]);
-                CurrentEdgeMatrix[destination * MaxComms + destination + t*MaxComms*MaxComms] +=
-                (destcount + outdestcount + SelfEdgeCounter[t]);
-                CurrentEdgeMatrix[destination * MaxComms + from + t*MaxComms*MaxComms] +=
-                (outfromcount - destcount); /// reminder: self-edges NOT included with NeighborSet
-                CurrentEdgeMatrix[from * MaxComms + destination + t*MaxComms*MaxComms] +=
-                (fromcount - outdestcount);
+                CurrentEdgeMatrix[from * MaxComms + from + t*MaxComms*MaxComms] -=(fromcount + outfromcount + SelfEdgeCounter[t*Nodes + vertex]);
+                if (CurrentEdgeMatrix[from * MaxComms + from + t*MaxComms*MaxComms] < 0)
+                    Rcout << "Negative Here" << CurrentEdgeMatrix[from * MaxComms + from + t*MaxComms*MaxComms] << " " <<std::endl;
+                CurrentEdgeMatrix[destination * MaxComms + destination + t*MaxComms*MaxComms] += (destcount + outdestcount + SelfEdgeCounter[t*Nodes + vertex]);
+                CurrentEdgeMatrix[destination * MaxComms + from + t*MaxComms*MaxComms] += (outfromcount - destcount); /// reminder: self-edges NOT included with NeighborSet
+                CurrentEdgeMatrix[from * MaxComms + destination + t*MaxComms*MaxComms] += (fromcount - outdestcount);
+                
             }
+            
+            Rcout << "vertex " << vertex << std::endl;
+            
+            int test = 0;
+            Rcout << "CurrentEdgeMatrix total ";
+            for (i = 0; i < T*MaxComms*MaxComms ; i++)
+                test += CurrentEdgeMatrix[i];
+            Rcout << test << " " << std::endl;
+            
+            test = 0;
+            Rcout << "NeighborSet";
+            for (i = 0; i < T*MaxComms ; i++)
+                test += NeighborSet[i];
+            Rcout << test << " " << std::endl;
+            
+            test = 0;
+            Rcout << "outNeighborSet";
+            for (i = 0; i < T*MaxComms ; i++)
+                test += outNeighborSet[i];
+            Rcout << test << " " << std::endl;
+            
+            
         }
         
         if(option == 1)
@@ -1331,13 +1390,15 @@ void UpdateMatrices(int vertex, int option, int from, int destination)
                 
                 BestCommStubs[from + t*MaxComms] -= outDegree[vertex + t*Nodes] ;
                 BestCommStubs[destination + t*MaxComms] += outDegree[vertex + t*Nodes];
-                BestCommStubsTotal[from] -= outDegree[vertex + t*Nodes] ;
-                BestCommStubsTotal[destination] += outDegree[vertex + t*Nodes];
                 BestCommEnds[from + t*MaxComms] -= Degree[vertex+ t*Nodes];
                 BestCommEnds[destination + t*MaxComms] += Degree[vertex + t*Nodes];
-                BestCommEndsTotal[from] -= Degree[vertex+ t*Nodes];
-                BestCommEndsTotal[destination] += Degree[vertex + t*Nodes];
                 
+                if (DegreeCorrect == 2) {
+                    BestCommStubsTotal[from] -= outDegree[vertex + t*Nodes] ;
+                    BestCommStubsTotal[destination] += outDegree[vertex + t*Nodes];
+                    BestCommEndsTotal[from] -= Degree[vertex+ t*Nodes];
+                    BestCommEndsTotal[destination] += Degree[vertex + t*Nodes];
+                }
                 
                 for(i=0; i < ActualDiffComms[t]; i++)
                 {
@@ -1372,17 +1433,20 @@ void UpdateMatrices(int vertex, int option, int from, int destination)
                 }
           
                 /// already dealt with self edges
-                BestEdgeMatrix[from * MaxComms + from + t*MaxComms*MaxComms] -=
-                (fromcount + outfromcount + SelfEdgeCounter[t]);
-                BestEdgeMatrix[destination * MaxComms + destination + t*MaxComms*MaxComms] +=
-                (destcount + outdestcount + SelfEdgeCounter[t]);
-                BestEdgeMatrix[destination * MaxComms + from + t*MaxComms*MaxComms] +=
-                (outfromcount - destcount); /// reminder: self-edges NOT included with NeighborSet
-                BestEdgeMatrix[from * MaxComms + destination + t*MaxComms*MaxComms] +=
-                (fromcount - outdestcount);
+                BestEdgeMatrix[from * MaxComms + from + t*MaxComms*MaxComms] -= (fromcount + outfromcount + SelfEdgeCounter[t*Nodes + vertex]);
+                BestEdgeMatrix[destination * MaxComms + destination + t*MaxComms*MaxComms] += (destcount + outdestcount + SelfEdgeCounter[t*Nodes + vertex]);
+                BestEdgeMatrix[destination * MaxComms + from + t*MaxComms*MaxComms] += (outfromcount - destcount); /// reminder: self-edges NOT included with NeighborSet
+                BestEdgeMatrix[from * MaxComms + destination + t*MaxComms*MaxComms] += (fromcount - outdestcount);
+                
+                /*int test = 0;
+                for (i = t*MaxComms*MaxComms; i < (t+1)*MaxComms*MaxComms ; i++)
+                    test += BestEdgeMatrix[i];
+                Rcout << "Is Best Edge Matrix Sum Right at Time " << t << "sum =" << test << std::endl;*/
                 
             }
+        
         }
+        
         return;
     }
     
@@ -1438,9 +1502,12 @@ void Setup(int Nodes, int MaxComms, bool Directed) {  //, const IntegerVector se
     Degree.assign(T*Nodes, 0.0);  // Degree of nodes in the network or in Degree if directed
     Count.assign(T*Nodes, 0);  // Degree of nodes in the network or in Degree if directed
     LastEmpty.assign(T*Nodes, 0);
+    SelfEdgeCounter.assign(T*Nodes, 0.0);
+    
     ActualDiffComms.assign(T, 0);
     CurrentCommStubsTotal.assign(MaxComms, 0.0);
     BestCommStubsTotal.assign(MaxComms, 0.0);
+    ActualDiffCommsVertex.assign(T*Nodes, 0.0);
 
     
     if (Directed)
@@ -1460,9 +1527,11 @@ void Setup(int Nodes, int MaxComms, bool Directed) {  //, const IntegerVector se
         outTempNeighborSet.assign(MaxComms, 0.0);
         
         outActualDiffComms.assign(T, 0);
+        outActualDiffCommsVertex.assign(T*Nodes, 0.0);
         
         CurrentCommEndsTotal.assign(MaxComms, 0.0);
         BestCommEndsTotal.assign(MaxComms, 0.0);
+        
     }
     
     //not time-dependent
@@ -1527,7 +1596,10 @@ List RunKLt(SEXP edgelistTime, const int maxComms, const bool directed, const in
                 Degree[edgelist(i, 1) + t*Nodes]+=edgelist(i, 2);
                 Count[edgelist(i, 0) + t*Nodes]++;
                 Count[edgelist(i, 1) + t*Nodes]++;
-                
+                if (edgelist(i, 0) == edgelist(i, 1)) {
+                    SelfEdgeCounter[t*Nodes + edgelist(i, 0)] += edgelist(i, 2);
+                    
+                }
             }
         }
         
@@ -1541,6 +1613,9 @@ List RunKLt(SEXP edgelistTime, const int maxComms, const bool directed, const in
                 outDegree[edgelist(i, 0) + t*Nodes]+=edgelist(i, 2);
                 Count[edgelist(i, 1) + t*Nodes]++;
                 outCount[edgelist(i, 0) +t*Nodes]++;
+                if (edgelist(i, 0) == edgelist(i, 1)) {
+                    SelfEdgeCounter[t*Nodes + edgelist(i, 0)] += edgelist(i, 2);
+                }
             }
             
             outmaxCount = *std::max_element(outCount.begin(), outCount.end());
@@ -1628,6 +1703,7 @@ List RunKLt(SEXP edgelistTime, const int maxComms, const bool directed, const in
         
     for (int KL = 0; KL < KLPerNetwork; KL++)
     {
+        Rcout << "KL " << KL << std::endl;
         long int tempvertex = 0;
         double prevMaxScore = -std::numeric_limits<double>::max( );
         
@@ -1672,6 +1748,7 @@ List RunKLt(SEXP edgelistTime, const int maxComms, const bool directed, const in
             // This would make it a factor of 2 slower.
             for(i=0; i < Nodes; i++)
             {
+                Rcout << "Node i " << i << " ";
                 MaxVertex = 0;
                 MaxRatio = -std::numeric_limits<double>::max( );
                 MaxPriority = 0;
@@ -1679,7 +1756,8 @@ List RunKLt(SEXP edgelistTime, const int maxComms, const bool directed, const in
                 // This loop selects which vertex to move;  as i increments up we have one less possible move
                 for(j=0; j < Nodes-i; j++)
                 {
-
+                    Rcout << ", j " << j << " ";
+                    //Rcout << "Node j " << j << std::endl;
                     // get proposal and proposal ratio for ChangeSet[j]
                     Priority = 0;
                     ProposalRatio = -std::numeric_limits<double>::max( );
@@ -1720,6 +1798,8 @@ List RunKLt(SEXP edgelistTime, const int maxComms, const bool directed, const in
                         }
                     }
                     
+                    Rcout << "test1" << std::endl;
+                    
                     // check whether its higher than what you already have as the max KL move
                     if(ProposalRatio > MaxRatio)
                     {
@@ -1741,8 +1821,10 @@ List RunKLt(SEXP edgelistTime, const int maxComms, const bool directed, const in
                     }
                     
                 }
-            
+                
                 // This updates the matrices to represent the vertices new state
+                
+                Rcout << "UpdateMatrices " << i << " ";
                 
                 UpdateMatrices(ChangeSet[MaxVertex], 0, CurrentState[ChangeSet[MaxVertex]], MaxPriority);
                 
@@ -1750,7 +1832,7 @@ List RunKLt(SEXP edgelistTime, const int maxComms, const bool directed, const in
 
                 // we are using logs so we add the maxratio to the current score for the new score
                 CurrentScore = CurrentScore + MaxRatio;
-
+                
                 UpdateIndex[ChangeSet[MaxVertex]] = i;
                 // we switch it with the last element of changeset, removing it from further consideration
                 // until we have moved the other vertices
@@ -1765,16 +1847,22 @@ List RunKLt(SEXP edgelistTime, const int maxComms, const bool directed, const in
 
                 if(CurrentScore > MaxScore)
                 {
+                    Rcout << "CurrentScore - MaxScore " << CurrentScore - MaxScore <<std::endl;
                     MaxScore = CurrentScore;
                     MaxIndex = i; //tells which move is best
                 }
             }
-                
+            
             // now we update BestState if a change resulted in a higher maximum
             // by implementing all the changes found above
 
             // There is a potential for speeding this up here.
             
+            Rcout << "UpdateIndex " << std::endl;
+            for (k = 0; k <= MaxIndex; k ++) {
+                Rcout << UpdateIndex[k] << " ";
+            }
+                
             if(MaxIndex != -1)
             {
                 for(i=0; i < Nodes; i++)
@@ -1790,20 +1878,21 @@ List RunKLt(SEXP edgelistTime, const int maxComms, const bool directed, const in
                          for (int t = 0; t < T; t++)
                          {
                              if (!Directed) {
-                                 ComputeNeighborSet(i, 1, AdjListT[t], AdjListWeightT[t],
+                                ComputeNeighborSet(i, 1, AdjListT[t], AdjListWeightT[t],
                                                     AdjListT[t], AdjListWeightT[t], t);
                              } else {
                                 ComputeNeighborSet(i, 1, AdjListT[t], AdjListWeightT[t],
                                                    outAdjListT[t], outAdjListWeightT[t], t);
                              }
                          }
-                             
+                        
                          UpdateMatrices(i, 1, BestState[i], CurrentState[i]); // 1 does best matrix update
                          
                          BestState[i] = CurrentState[i];
                      }
                  }
             }
+            
         }
         
         if(MaxScore >= HighestScore)
