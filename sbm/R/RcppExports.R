@@ -5,3 +5,7 @@ sbmFit <- function(edgelist, maxComms, degreeCorrect, directed, klPerNetwork, we
     .Call('sbm_sbmFit', PACKAGE = 'sbm', edgelist, maxComms, degreeCorrect, directed, klPerNetwork, weights)
 }
 
+sbmtFit <- function(edgelistTime, maxComms, directed, klPerNetwork, degreeCorrect, nodes) {
+    .Call('sbm_sbmtFit', PACKAGE = 'sbm', edgelistTime, maxComms, directed, klPerNetwork, degreeCorrect, nodes)
+}
+
