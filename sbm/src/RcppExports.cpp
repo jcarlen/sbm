@@ -21,3 +21,30 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// sbmtFit
+List sbmtFit(SEXP edgelistTime, const int maxComms, const bool directed, const int klPerNetwork, const int degreeCorrect, const int nodes);
+RcppExport SEXP sbm_sbmtFit(SEXP edgelistTimeSEXP, SEXP maxCommsSEXP, SEXP directedSEXP, SEXP klPerNetworkSEXP, SEXP degreeCorrectSEXP, SEXP nodesSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< SEXP >::type edgelistTime(edgelistTimeSEXP);
+    Rcpp::traits::input_parameter< const int >::type maxComms(maxCommsSEXP);
+    Rcpp::traits::input_parameter< const bool >::type directed(directedSEXP);
+    Rcpp::traits::input_parameter< const int >::type klPerNetwork(klPerNetworkSEXP);
+    Rcpp::traits::input_parameter< const int >::type degreeCorrect(degreeCorrectSEXP);
+    Rcpp::traits::input_parameter< const int >::type nodes(nodesSEXP);
+    rcpp_result_gen = Rcpp::wrap(sbmtFit(edgelistTime, maxComms, directed, klPerNetwork, degreeCorrect, nodes));
+    return rcpp_result_gen;
+END_RCPP
+}
+
+static const R_CallMethodDef CallEntries[] = {
+    {"sbm_sbmFit", (DL_FUNC) &sbm_sbmFit, 6},
+    {"sbm_sbmtFit", (DL_FUNC) &sbm_sbmtFit, 6},
+    {NULL, NULL, 0}
+};
+
+RcppExport void R_init_sbm(DllInfo *dll) {
+    R_registerRoutines(dll, NULL, CallEntries, NULL, NULL);
+    R_useDynamicSymbols(dll, FALSE);
+}
