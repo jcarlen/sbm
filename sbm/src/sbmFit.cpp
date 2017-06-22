@@ -101,10 +101,10 @@ void UpdateMatrices(int vertex, int option, int from, int destination); // this 
 double LogFunction(double x); // this returns x*log(x) and zero if x=0
 IntegerVector randomComms(int Nodes, int MaxComms); // generates random commmunity assignments
 
-// for calling KL directly, for time-dependent models
+// for time-dependent models
 void Setup(int Nodes, int MaxComms, bool Directed);
 void InitializeKLt(List AdjList, List AdjListWeight); // initializes the data structures for KL
-List RunKLt(SEXP edgelistTime, const IntegerMatrix & edgelistTotal, const NumericVector & weightsTotal, const int maxComms, const bool directed, const int klPerNetwork, const int degreeCorrect, const int nodes);
+List sbmtFit(SEXP edgelistTime, const IntegerMatrix & edgelistTotal, const NumericVector & weightsTotal, const int maxComms, const bool directed, const int klPerNetwork, const int degreeCorrect, const int nodes);
 
 //*********************** MAIN PROGRAM ***********************************************************************
 
@@ -664,7 +664,7 @@ double ComputeInitialScore()
         }
     }
     
-    Rcout << "sum " << sum << std::endl;
+    //Rcout << "sum " << sum << std::endl;
     return sum;
     
     
@@ -1500,7 +1500,7 @@ void Setup(int Nodes, int MaxComms, bool Directed) {  //, const IntegerVector se
 
 // [[Rcpp::export]]
 
-List RunKLt(SEXP edgelistTime, const int maxComms, const bool directed, const int klPerNetwork, const int degreeCorrect, const int nodes)
+List sbmtFit(SEXP edgelistTime, const int maxComms, const bool directed, const int klPerNetwork, const int degreeCorrect, const int nodes)
     {
         
     int i, j, k;
