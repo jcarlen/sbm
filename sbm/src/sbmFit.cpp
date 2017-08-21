@@ -19,35 +19,13 @@
 /// Real-valued, non-neg weights accepted via weights arg (rather than repeated edges in list)
 ///
 /// This version is similar to KLOptimization_directed, but connects to R via RCPP
-
+///
+/// Note from original: please do not distribute without contacting karrerb@umich.edu.
 
 // -------------------------------------------------------------
 
-// Please do not distribute without contacting karrerb@umich.edu.
-
-// This code uses the GNU GSL random number generators.  If these are unavailable, please
-// replace the random number generator.  The default is to seed the random number generator using
-// the system clock and to use the mersenne twister.
-
-// Please read the implementation directions below to start using the program.
-
-/*#include <stdio.h>
-#include <string.h>
-
-#include <fstream>
-#include <limits>
-
-
-#include <ctime>*/
-
-
-//#include <math.h>
-//#include <vector>
 #include <Rcpp.h>
-//#include "sbmFit.h" - was a file for randomComms function so I didn't have copy of it in thi sfile and KL.cpp
-
 using namespace Rcpp;
-
 
 //*********************** GLOBAL VARIABLES *******************************************************************
 
@@ -443,7 +421,6 @@ void RunKL(IntegerMatrix AdjList, NumericMatrix AdjListWeight, IntegerMatrix out
                 MaxIndex = i;
             }
             
-            Rcout << "end i loop" << std::endl;
         }
         
         // now we update BestState if a change resulted in a higher maximum
