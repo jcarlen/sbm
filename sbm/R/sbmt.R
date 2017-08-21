@@ -7,6 +7,7 @@
 ##        Add functionality to set initial/seed communities
 ##        Allow network input and function converts to edgelist
 ##        Allow additional entry types and time-value attribute in edgelist.time
+##        More checks for proper data entry, otherwise can cause R error
 
 #' @KLPerNetwork this is the number of KL runs on a network
 #' @maxComms maximum number of communities represented in the network
@@ -18,10 +19,11 @@
 
 
 sbmt <- function(edgelist.time, klPerNetwork = 50, maxComms = 2, seedComms = NULL, directed = F, degreeCorrect = 0, seed = NULL) {
-
-    if (!is.list(edgelist.time)) {
-        stop("edgelist.time should be a list where each entry is an edgelist of at least two columns, three if weights are supplied")
-    } else {
+    
+        #check it's the right type of data/list format
+        if (!is.list(edgelist.time) | is.null(edgelist.time[[1]])) {
+            stop("edgelist.time should be a list where each entry is an edgelist of at least two columns, three if weights are supplied")
+        } else {
         
         #extract unique nodes and re-level them to 1:N
         nodes = unique(as.vector(unlist(sapply(1:length(edgelist.time), function(x) {unlist(edgelist.time[[x]][,1:2])}))))
