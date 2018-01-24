@@ -1526,7 +1526,7 @@ List sbmtFit(SEXP edgelistTime, const int maxComms, const bool directed, const i
         if (Directed)
         {
             for(i=0; i < counter; i++)
-            {
+            
                 Degree[edgelist(i, 1) + t*Nodes]+=edgelist(i, 2);
                 outDegree[edgelist(i, 0) + t*Nodes]+=edgelist(i, 2);
                 Count[edgelist(i, 1) + t*Nodes]++;
