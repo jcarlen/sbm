@@ -46,7 +46,7 @@ sbm <- function(edgelist, maxComms = 2, degreeCorrect = F, directed = FALSE, klP
         stop("Directed should be FALSE or TRUE (0 or 1 OK)")
     }
     
-    degreeCorrect = as.numeric(degreeCorrect) # relic of Karrer and Newman code to have degreeCorrect be 0|1
+    degreeCorrect = as.numeric(!degreeCorrect==0) # relic of Karrer and Newman code to have degreeCorrect be 0|1
     
     #seed?
     
