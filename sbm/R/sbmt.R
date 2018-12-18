@@ -23,42 +23,45 @@ sbmt <- function(edgelist.time, klPerNetwork = 50, maxComms = 2, seedComms = NUL
         #check it's the right type of data/list format
         if (!is.list(edgelist.time) | is.null(edgelist.time[[1]])) {
             stop("edgelist.time should be a list where each entry is an edgelist of at least two columns, three if weights are supplied")
-        } else {
+        }
         
         #extract unique nodes and re-level them to 1:N
-        nodes = unique(as.vector(unlist(sapply(1:length(edgelist.time), function(x) {unlist(edgelist.time[[x]][,1:2])}))))
+        nodes = sort(unique(as.character(unlist(sapply(1:length(edgelist.time), function(x) {unlist(edgelist.time[[x]][,1:2])})))))
         N = length(nodes)
-        i = 1
+        link.nodes = 1:N; names(link.nodes) = nodes
+
+        ncol.min = min(sapply(edgelist.time, ncol))
         
-        for (edgelist in edgelist.time) {
+        edgelist.time = lapply(edgelist.time, function(edgelist) {
             # Argument Checks
             if (is.null(dim(edgelist)) || ncol(edgelist) < 2) {
                 stop("edgelist must have at least two columns, three if weights are supplied")
             }
+            
+            if (ncol(edgelist) > 3 ) {
+                edgelist = edgelist[,1:ncol.min]
+                warning("currently only edglist format is supported with first two columns indicating from & to nodes and third column is weights, if present. Truncating to minimum column number.")
+            }
+            
             if (is.list(edgelist)) {edgelist = as.matrix(edgelist)} #convert from data frame to matrix if necessary
             
             # Remove potential attributes
-            edgelist = matrix(as.numeric(as.vector(edgelist)), ncol = ncol(edgelist))
+            #edgelist = matrix(as.numeric(as.vector(edgelist)), ncol = ncol(edgelist))
             
             # Relevel IDs
-            edgelist1 = as.factor(c(edgelist[,1], edgelist[,2]))
-            levels(edgelist1) = 1:N
-            edgelist1 = matrix(as.numeric(edgelist1), ncol = 2) - 1 #for 0 indexing in cpp
+            edgelist1 = cbind(link.nodes[as.character(edgelist[,1])], link.nodes[as.character(edgelist[,2])])
             
             # Format weights
-            if (ncol(edgelist) == 2) {
-                edgelist1 = cbind(edgelist1, rep(1, nrow(edgelist)))
+            if (ncol(edgelist) == 2) {edgelist1 = cbind(edgelist1, rep(1, nrow(edgelist)))}
                 #weighted = FALSE
-            }
             
-            if (ncol(edgelist) == 3) {
-                edgelist1 = cbind(edgelist1, edgelist[,3])
+            if (ncol(edgelist) == 3) {edgelist1 = cbind(edgelist1, edgelist[,3])}
                 #weighted = TRUE
-            }
+         
+            edgelist1 = matrix(as.numeric(edgelist1)-1, ncol = 3)
             
-            edgelist.time[[i]] = edgelist1
-            i = i + 1
-        }
+            edgelist1
+        })
         
         # Create total matrix; remove diag?
         # edgelist.total = lapply(edgelist.time,
@@ -69,17 +72,15 @@ sbmt <- function(edgelist.time, klPerNetwork = 50, maxComms = 2, seedComms = NUL
         
         # edgelist.total = Reduce('+', edgelist.total)
         # edgelist.total = reshape2::melt(edgelist.total)
-        
-    }
 
     # Put directed arg in logical terms
     if (directed == 0 || directed == 1) {directed = as.logical(directed)}
     if (!is.logical(directed)) {
-        stop("Directed should be FALSE or TRUE (0 or 1 OK)")
+        stop("directed should be FALSE or TRUE (0 or 1 OK)")
     }
 
-    degreeCorrect = as.numeric(degreeCorrect) #to handle T/F input
-
+    degreeCorrect = as.integer(degreeCorrect) #to handle T/F input
+    if (is.na(degreeCorrect)) stop("degreeCorrect should be a logical or an integer in the specific range, with 0 for no degree correction")
     #seed?
 
     ## Make the call...
@@ -93,7 +94,8 @@ sbmt <- function(edgelist.time, klPerNetwork = 50, maxComms = 2, seedComms = NUL
     Results$TimeMatrices = sapply(1:T, function(x) {
         matrix(Results$EdgeMatrix[ (maxComms^2 * (x-1) + 1) : (maxComms^2 * x) ], nrow = maxComms, ncol = maxComms)
     }, simplify = F,  USE.NAMES = F)
-
+    Results$link.nodes = link.nodes
+    
     Results
 }
 
