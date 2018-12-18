@@ -29,6 +29,7 @@ List sbmtFit(SEXP edgelistTime, const int maxComms, const bool directed, const i
     DegreeCorrect = degreeCorrect;
     
     Setup(Nodes, MaxComms, Directed);
+    Rcout << "Setup Complete" << std::endl;
     
     Rcpp::List AdjListT(T);
     Rcpp::List AdjListWeightT(T);
@@ -61,23 +62,31 @@ List sbmtFit(SEXP edgelistTime, const int maxComms, const bool directed, const i
             }
         }
         
+        Rcout << "Line 65\n" << std::endl;
+        
         outmaxCount = 1; //have to set a default for directed.
         
         if (Directed)
         {
             for(i=0; i < counter; i++)
-                
+            {
+            
                 Degree[edgelist(i, 1) + t*Nodes]+=edgelist(i, 2);
-            outDegree[edgelist(i, 0) + t*Nodes]+=edgelist(i, 2);
-            Count[edgelist(i, 1) + t*Nodes]++;
-            outCount[edgelist(i, 0) +t*Nodes]++;
-            if (edgelist(i, 0) == edgelist(i, 1)) {
-                SelfEdgeCounter[t*Nodes + edgelist(i, 0)] += edgelist(i, 2);
+                outDegree[edgelist(i, 0) + t*Nodes]+=edgelist(i, 2);
+                Count[edgelist(i, 1) + t*Nodes]++;
+                outCount[edgelist(i, 0) +t*Nodes]++;
+                if (edgelist(i, 0) == edgelist(i, 1)) {
+                    SelfEdgeCounter[t*Nodes + edgelist(i, 0)] += edgelist(i, 2);
+                }
             }
-        }
         
+        Rcout << "Line 83\n" << std::endl;
         outmaxCount = *std::max_element(outCount.begin(), outCount.end());
+        
+        }
     
+        Rcout << "Line 84\n" << std::endl;
+        
     // Setup AdjLists
     // Create big enough adjlist matrices (less efficient than dynamic mem cpp-only implementation, but seems necessary)
     // keep at this scope so it's set correctly
