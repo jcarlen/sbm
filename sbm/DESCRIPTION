@@ -1,15 +1,12 @@
 Package: sbm
-Type: Package
-Title: What the Package Does in One 'Title Case'
-     Line
-Version: 1.0
-Date: 2017-03-18
-Author: Your Name
-Maintainer: Your Name <your@email.com>
-Description: One paragraph description of what the
-     package does as one or more full sentences.
-License: GPL (>= 2)
-Imports: Rcpp (>= 0.12.8)
+Title: Fit stochastic blockmodels with options for degree correction, directed, and time-dependent networks
+Description: TBD
+Version: 0.0
+Author: Jane Carlen
+Maintainer: Jane Carlen <jcarlen@ucla.edu>
+License: GPL-3 
+SystemRequirements:
+Imports: Rcpp (>= 0.11.0)
+Suggets: 
 LinkingTo: Rcpp
-RoxygenNote: 6.0.1
-Suggests: testthat
+Others: 
