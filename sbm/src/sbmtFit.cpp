@@ -29,7 +29,6 @@ List sbmtFit(SEXP edgelistTime, const int maxComms, const bool directed, const i
     DegreeCorrect = degreeCorrect;
     
     Setup(Nodes, MaxComms, Directed);
-    Rcout << "Setup Complete" << std::endl;
     
     Rcpp::List AdjListT(T);
     Rcpp::List AdjListWeightT(T);
@@ -62,8 +61,6 @@ List sbmtFit(SEXP edgelistTime, const int maxComms, const bool directed, const i
             }
         }
         
-        Rcout << "Line 65\n" << std::endl;
-        
         outmaxCount = 1; //have to set a default for directed.
         
         if (Directed)
@@ -80,12 +77,9 @@ List sbmtFit(SEXP edgelistTime, const int maxComms, const bool directed, const i
                 }
             }
         
-        Rcout << "Line 83\n" << std::endl;
         outmaxCount = *std::max_element(outCount.begin(), outCount.end());
         
         }
-    
-        Rcout << "Line 84\n" << std::endl;
         
     // Setup AdjLists
     // Create big enough adjlist matrices (less efficient than dynamic mem cpp-only implementation, but seems necessary)
@@ -145,6 +139,7 @@ List sbmtFit(SEXP edgelistTime, const int maxComms, const bool directed, const i
     t++;
     }
 
+    Rcout << "End Setup of sbmtFit\n" << std::endl;
     //////////////////////////// End Setup of sbmtFit /////////////////////////////////
 
     int MaxIndex;
@@ -163,7 +158,7 @@ List sbmtFit(SEXP edgelistTime, const int maxComms, const bool directed, const i
     std::vector<double> SavedCommStubs(MaxComms, 0.0);
     std::vector<double> SavedCommEnds(MaxComms, 0.0);
     std::vector<double> SavedEdgeMatrix(MaxComms*MaxComms, 0.0);
-    long double tolerance = 0.00000001; // this prevents loops due to numerical errors.
+    long double tolerance = .0001; //0.00000001; // this prevents loops due to numerical errors.
     double HighestScore = -std::numeric_limits<double>::max( );
 
     for (int KL = 0; KL < KLPerNetwork; KL++)
@@ -210,7 +205,7 @@ List sbmtFit(SEXP edgelistTime, const int maxComms, const bool directed, const i
             {
                 CurrentCommVertices[i] = BestCommVertices[i];
                 
-                if (DegreeCorrect == 2) {
+                if (DegreeCorrect == 2 | DegreeCorrect == 3) {
                     CurrentCommStubsTotal[i] = BestCommStubsTotal[i];
                     if (Directed){
                         CurrentCommEndsTotal[i] = BestCommEndsTotal[i];
@@ -322,7 +317,7 @@ List sbmtFit(SEXP edgelistTime, const int maxComms, const bool directed, const i
                 
                 if(CurrentScore > MaxScore)
                 {
-                    //Rcout << "CurrentScore - MaxScore " << CurrentScore - MaxScore <<std::endl;
+                    // Rcout << "CurrentScore - MaxScore " << CurrentScore - MaxScore <<std::endl;
                     MaxScore = CurrentScore;
                     MaxIndex = i; //tells which move is best
                 }

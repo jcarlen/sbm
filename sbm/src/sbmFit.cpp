@@ -6,11 +6,11 @@
 //          3) Doubles instead of floats - need precision for LogFunction
 // -------------------------------------------------------------
 // Jane Carlen
-// First run March, 18 2017
+// First draft March, 18 2017
 //
-// DIRECTED and undirected, degree-corrected stochastic block model implementation
+// Directed and undirected, degree-corrected stochastic block model implementation
 // Adapted from Brian Karrer http://www-personal.umich.edu/~mejn/dcsbm/KLOptimization.cpp
-// Real-valued, non-neg weights accepted via weights arg (rather than repeated edges in list)
+// Real-valued, non-neg weights accepted via weights column (rather than repeated edges in list)
 // This version is similar to KLOptimization_directed, but connects to R via RCPP
 // Note from original: please do not distribute without contacting karrerb@umich.edu.
 // -------------------------------------------------------------
@@ -40,7 +40,7 @@ std::vector<int> BestCommVertices; //[MaxComms]
 std::vector<double>BestCommStubs; //if directed, keeps tally of edges originating in a class
 std::vector<double>BestCommEnds; //for directed, keeps tally of edges ending in a class
 std::vector<double>BestCommStubsTotal; // For networks with time slices, total stubs over all time periods
-std::vector<double>BestCommEndsTotal; //    For use with DegreeCorrect 2
+std::vector<double>BestCommEndsTotal; //    For use with DegreeCorrect 2 and 3
 
 std::vector<int> CurrentCommVertices; //[MaxComms]
 std::vector<double> CurrentCommStubs;
@@ -616,6 +616,10 @@ double ComputeInitialScore()
                     if (DegreeCorrect == 2) {
                         bestval = BestCommStubsTotal[i]*BestCommEndsTotal[j];
                     }
+                   
+                    if (DegreeCorrect == 3) {
+                        bestval = (BestCommStubsTotal[i]+BestCommEndsTotal[i]) * (BestCommStubsTotal[j]+BestCommEndsTotal[j]);
+                    }
                     
                     if ( bestval > tolerance && BestEdgeMatrix[i*MaxComms+j + t*MaxComms*MaxComms] > tolerance)
                         sum = sum - BestEdgeMatrix[i*MaxComms+j + t*MaxComms*MaxComms] * log(bestval);
@@ -913,7 +917,7 @@ double ComputeProposal(int vertex, int from, int destination)
              // at the end we put all degree zeroes into their own group
              if(DegreeCorrect == 1 && (Degree[vertex + t*Nodes] <= tolerance && outDegree[vertex + t*Nodes] <= tolerance )) continue;
              
-             if(DegreeCorrect == 2 && (degreeTotal <= tolerance && outDegreeTotal <= tolerance)) continue;
+             if( (DegreeCorrect == 2 | DegreeCorrect == 3) && (degreeTotal <= tolerance && outDegreeTotal <= tolerance)) continue;
              
              // 1) Communities going into the vertex
              // we first add up all the cross-terms (between communities that are not from / destination)
@@ -1115,6 +1119,27 @@ double ComputeProposal(int vertex, int from, int destination)
                  
              }
              
+             if(DegreeCorrect == 3)
+             {
+                 // now we add in the terms corresponding to from
+                 ///in
+                 help1 = double(CurrentCommStubsTotal[from]+CurrentCommEndsTotal[from]);
+                 help2 = double(Degree[vertex + t*Nodes] + outDegree[vertex + t*Nodes]);
+                 help3 = double(CurrentCommEnds[from + t*MaxComms] + CurrentCommStubs[from + t*MaxComms]);
+                 
+                 if (help1 > tolerance && help1 - help2 > tolerance)
+                     ratiovalue += -(help3 - help2)*log(help1 - degreeTotal - outDegreeTotal) + help3*log(help1);
+                 
+                 // now we add in the terms corresponding to dest
+                 ///in
+                 help1 = double(CurrentCommEndsTotal[destination] + CurrentCommStubsTotal[destination]);
+                 help2 = double(Degree[vertex + t*Nodes] + outDegree[vertex + t*Nodes]);
+                 help3 = double(CurrentCommEnds[destination + t*MaxComms] + CurrentCommStubs[destination + t*MaxComms]);
+                 
+                 if (help1 > tolerance && help1 + help2 > tolerance)
+                     ratiovalue += -(help3 + help2)*log(help1 + degreeTotal + outDegreeTotal) + help3*log(help1);
+             }
+
         }
         
     }
@@ -1244,13 +1269,13 @@ void UpdateMatrices(int vertex, int option, int from, int destination)
                 CurrentCommEnds[from + t*MaxComms] -= Degree[vertex+ t*Nodes];
                 CurrentCommEnds[destination + t*MaxComms] += Degree[vertex + t*Nodes];
                 
-                if (DegreeCorrect == 2) {
+                if (DegreeCorrect == 2 | DegreeCorrect == 3) {
                     CurrentCommStubsTotal[from] -= outDegree[vertex + t*Nodes] ;
                     CurrentCommStubsTotal[destination] += outDegree[vertex + t*Nodes];
                     CurrentCommEndsTotal[from] -= Degree[vertex+ t*Nodes];
                     CurrentCommEndsTotal[destination] += Degree[vertex + t*Nodes];
                 }
-            
+                
                 for(i=0; i < MaxComms; i++)
                 {
                     if((i != from) && (i != destination))
@@ -1311,12 +1336,13 @@ void UpdateMatrices(int vertex, int option, int from, int destination)
                 BestCommEnds[from + t*MaxComms] -= Degree[vertex+ t*Nodes];
                 BestCommEnds[destination + t*MaxComms] += Degree[vertex + t*Nodes];
                 
-                if (DegreeCorrect == 2) {
+                if (DegreeCorrect == 2 | DegreeCorrect == 3) {
                     BestCommStubsTotal[from] -= outDegree[vertex + t*Nodes] ;
                     BestCommStubsTotal[destination] += outDegree[vertex + t*Nodes];
                     BestCommEndsTotal[from] -= Degree[vertex+ t*Nodes];
                     BestCommEndsTotal[destination] += Degree[vertex + t*Nodes];
                 }
+                
                 
                 for(i=0; i < MaxComms; i++)
                 {

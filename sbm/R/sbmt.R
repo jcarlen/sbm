@@ -12,13 +12,33 @@
 #' @KLPerNetwork this is the number of KL runs on a network
 #' @maxComms maximum number of communities represented in the network
 #' @seedComms user-supplied starting values for KL runs. NOT YET IMPLEMENTED.
-# '@directed whether the network is directed and off-diagonal block parameters may be assymetrical
-# '@degreeCorrect whether to apply degree correction. 0 = no degree correction; 1 = the degree correction of Karrer and Newman, 2 = time-independent degree correction over time-dependent data
+#' @directed whether the network is directed and off-diagonal block parameters may be assymetrical
+#' @degreeCorrect whether to apply degree correction.:
+#' \itemize {
+#'   \itme 0 = no degree correction
+#'   \item 1 = the degree correction of Karrer and Newman at every time step
+#'   \item 2 = time-independent degree correction over time-dependent data - inherets directedness of graph
+#'   \item 3 = time-independent degree correction over time-dependent data - undirected regardless
+#  }
 # '@seed a random seet set for reproducibility. (Implemented?)
 
 
 
-sbmt <- function(edgelist.time, klPerNetwork = 50, maxComms = 2, seedComms = NULL, directed = F, degreeCorrect = 0, seed = NULL) {
+#' @param method2 one of:
+#' \itemize{
+#'   \item method1 - very long text here
+#'   \item method2 - very long text here
+#'   \item method3 - very long text here
+#'   \item method4 - very long text here
+#'   \item method5 - very long text here
+#'   \item method6 - very long text here
+#'   \item method7 - very long text here
+#'   \item method8 - very long text here
+#'   \item method9 - very long text here
+#'   \item method10 - very long text here
+#' }
+
+sbmt <- function(edgelist.time, maxComms = 2, degreeCorrect = 0, directed = F, klPerNetwork = 50, seedComms = NULL, seed = NULL) {
     
         #check it's the right type of data/list format
         if (!is.list(edgelist.time) | is.null(edgelist.time[[1]])) {
@@ -51,12 +71,16 @@ sbmt <- function(edgelist.time, klPerNetwork = 50, maxComms = 2, seedComms = NUL
             # Relevel IDs
             edgelist1 = cbind(link.nodes[as.character(edgelist[,1])], link.nodes[as.character(edgelist[,2])])
             
-            # Format weights
-            if (ncol(edgelist) == 2) {edgelist1 = cbind(edgelist1, rep(1, nrow(edgelist)))}
-                #weighted = FALSE
             
-            if (ncol(edgelist) == 3) {edgelist1 = cbind(edgelist1, edgelist[,3])}
-                #weighted = TRUE
+            if (ncol(edgelist) == 2) {
+              edgelist1 = cbind(edgelist1, rep(1, nrow(edgelist)))
+            }
+               
+            
+            if (ncol(edgelist) == 3) {
+              edgelist1 = cbind(edgelist1, edgelist[,3])
+            }
+                
          
             edgelist1 = matrix(as.numeric(edgelist1)-1, ncol = 3)
             
@@ -81,6 +105,7 @@ sbmt <- function(edgelist.time, klPerNetwork = 50, maxComms = 2, seedComms = NUL
 
     degreeCorrect = as.integer(degreeCorrect) #to handle T/F input
     if (is.na(degreeCorrect)) stop("degreeCorrect should be a logical or an integer in the specific range, with 0 for no degree correction")
+    if (degreeCorrect == 3 & directed == FALSE) {degreeCorrect = 2} #Degree Correct three used when graph is directed to induce non-directed degree correction.
     #seed?
 
     ## Make the call...
@@ -94,11 +119,16 @@ sbmt <- function(edgelist.time, klPerNetwork = 50, maxComms = 2, seedComms = NUL
     Results$TimeMatrices = sapply(1:T, function(x) {
         matrix(Results$EdgeMatrix[ (maxComms^2 * (x-1) + 1) : (maxComms^2 * x) ], nrow = maxComms, ncol = maxComms)
     }, simplify = F,  USE.NAMES = F)
-    Results$link.nodes = link.nodes
+    
+    # Return found community membership in order of ID
+    names(Results$FoundComms) = names(link.nodes)
+    
+    Results$directed = directed
+    Results$klPerNetwork = klPerNetwork
+    Results$degreeCorrect = degreeCorrect
     
     Results
 }
-
 
 
 # The overall process vis sbmt/:
@@ -115,7 +145,7 @@ sbmt <- function(edgelist.time, klPerNetwork = 50, maxComms = 2, seedComms = NUL
 
     # Initialize thetas (closed-form)####
   
-    # Calculate omegas (closed from| g and thetas) ####
+    # Calculate omegas (closed form| g and thetas) ####
   
       # Update assignments (KL) ####
 

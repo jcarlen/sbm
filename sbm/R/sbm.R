@@ -24,9 +24,9 @@ sbm <- function(edgelist, maxComms = 2, degreeCorrect = F, directed = FALSE, klP
     
     # Relevel IDs
     edgelist1 = as.factor(c(edgelist[,1], edgelist[,2]))
-    levels(edgelist1) = 1:length(unique(edgelist1))
+    N = length(unique(edgelist1)); link.nodes = 1:N; names(link.nodes) = levels(edgelist1)
+    levels(edgelist1) = 1:N
     edgelist1 = matrix(as.numeric(edgelist1), ncol = 2)
-
     
     # Format weights
     if (ncol(edgelist) == 2) {
@@ -46,23 +46,24 @@ sbm <- function(edgelist, maxComms = 2, degreeCorrect = F, directed = FALSE, klP
         stop("Directed should be FALSE or TRUE (0 or 1 OK)")
     }
     
-    if(degreeCorrect %in% c(0,1,2)) {degreeCorrect = as.numeric(degreeCorrect)} else {
-        warning("Degree correct should be 0, 1, or 2. Defaulted to 0 (no correction)")
+    if(degreeCorrect %in% c(0,1)) {degreeCorrect = as.numeric(degreeCorrect)} else {
+        warning("Degree correct should be 0 or 1 for non-time-dependent network. Defaulted to 0 (no correction)")
         degreeCorrect = 0
         # relic of Karrer and Newman code to have degreeCorrect be 0|1
     }
-    
     #seed?
     
     ## Make the call...
     Results <- sbmFit(edgelist1-1, maxComms, degreeCorrect, directed, klPerNetwork, weights)
     
     cat("\nResults!\n")
+    
+    names(Results$FoundComms) = names(link.nodes) # Return found community membership in order of ID
     Results$EdgeMatrix = matrix(Results$EdgeMatrix, maxComms, maxComms)
-    attr(Results, "degreeCorrect") <- degreeCorrect == 1
-    attr(Results, "directed") <- directed
-    attr(Results, "klPerNetwork") <- klPerNetwork
-    attr(Results, "weights") <- weighted
+    Results$degreeCorrect = degreeCorrect
+    Results$directed = directed
+    Results$klPerNetwork = klPerNetwork
+    Results$weighted = weighted
     
     Results
 }
