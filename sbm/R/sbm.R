@@ -4,6 +4,7 @@
 ## along with RcppExamples.  If not, see <http://www.gnu.org/licenses/>.)
 
 ## To do: Check that seed can be set for reproducibility
+## make tolerance an argument to sbm (and sbmt)
 
 #' @maxComms maximum number of communities represented in the network
 # '@degreeCorrect whether to apply the degree correction of Karrer and Newman

@@ -8,6 +8,8 @@
 ##        Allow network input and function converts to edgelist
 ##        Allow additional entry types and time-value attribute in edgelist.time
 ##        More checks for proper data entry, otherwise can cause R error
+##        Update la edgelist in sbm package to agree with paper (la_byhour)
+##        Implement undirected degreee correction for static sbm?
 
 #' @KLPerNetwork this is the number of KL runs on a network
 #' @maxComms maximum number of communities represented in the network

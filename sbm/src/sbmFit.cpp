@@ -283,7 +283,7 @@ void RunKL(IntegerMatrix AdjList, NumericMatrix AdjListWeight, IntegerMatrix out
     std::vector<int> UpdateIndex(Nodes, -1);
     
     double prevMaxScore = -std::numeric_limits<double>::max( );
-    long double tolerance = 0.00000001; // this prevents loops due to numerical errors.
+    long double tolerance = 0.0001; // this prevents loops due to numerical errors.
     
     double ProposalRatio;
     double value;
