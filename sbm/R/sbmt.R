@@ -9,7 +9,7 @@
 ##        Allow additional entry types and time-value attribute in edgelist.time
 ##        More checks for proper data entry, otherwise can cause R error
 ##        Update la edgelist in sbm package to agree with paper (la_byhour)
-##        Implement undirected degreee correction for static sbm?
+##        Implement undirected degree correction for static sbm on directed network?
 
 #' @KLPerNetwork this is the number of KL runs on a network
 #' @maxComms maximum number of communities represented in the network
@@ -22,6 +22,7 @@
 #'   \item 2 = time-independent degree correction over time-dependent data - inherets directedness of graph
 #'   \item 3 = time-independent degree correction over time-dependent data - undirected regardless
 #  }
+# '@tolerance stopping criteria for KL. Prevents loops due to numerical errors.
 # '@seed a random seet set for reproducibility. (Implemented?)
 
 
@@ -40,7 +41,7 @@
 #'   \item method10 - very long text here
 #' }
 
-sbmt <- function(edgelist.time, maxComms = 2, degreeCorrect = 0, directed = F, klPerNetwork = 50, seedComms = NULL, seed = NULL) {
+sbmt <- function(edgelist.time, maxComms = 2, degreeCorrect = 0, directed = F, klPerNetwork = 50, tolerance = 1e-4, seedComms = NULL, seed = NULL) {
     
         #check it's the right type of data/list format
         if (!is.list(edgelist.time) | is.null(edgelist.time[[1]])) {
@@ -50,7 +51,7 @@ sbmt <- function(edgelist.time, maxComms = 2, degreeCorrect = 0, directed = F, k
         #extract unique nodes and re-level them to 1:N
         nodes = sort(unique(as.character(unlist(sapply(1:length(edgelist.time), function(x) {unlist(edgelist.time[[x]][,1:2])})))))
         N = length(nodes)
-        link.nodes = 1:N; names(link.nodes) = nodes
+        link.nodes = 0:(N-1); names(link.nodes) = nodes
 
         ncol.min = min(sapply(edgelist.time, ncol))
         
@@ -77,27 +78,15 @@ sbmt <- function(edgelist.time, maxComms = 2, degreeCorrect = 0, directed = F, k
             if (ncol(edgelist) == 2) {
               edgelist1 = cbind(edgelist1, rep(1, nrow(edgelist)))
             }
-               
             
             if (ncol(edgelist) == 3) {
               edgelist1 = cbind(edgelist1, edgelist[,3])
             }
-                
-         
-            edgelist1 = matrix(as.numeric(edgelist1)-1, ncol = 3)
+            
+            edgelist1 = matrix(as.numeric(edgelist1), ncol = 3)
             
             edgelist1
         })
-        
-        # Create total matrix; remove diag?
-        # edgelist.total = lapply(edgelist.time,
-        # function (x){
-        #    tmp = igraph::graph.data.frame(x, vertices = 0:(N-1))
-        #    igraph::as_adjacency_matrix(tmp, sparse = F, attr = "V3")
-        #    })
-        
-        # edgelist.total = Reduce('+', edgelist.total)
-        # edgelist.total = reshape2::melt(edgelist.total)
 
     # Put directed arg in logical terms
     if (directed == 0 || directed == 1) {directed = as.logical(directed)}
@@ -112,14 +101,12 @@ sbmt <- function(edgelist.time, maxComms = 2, degreeCorrect = 0, directed = F, k
 
     ## Make the call...
 
-    Results <- sbmtFit(edgelist.time,
-    #as.matrix(edgelist.total[,1:2], ncol = 2), as.vector(edgelist.total[,3]),
-    maxComms, directed, klPerNetwork, degreeCorrect, N)
+    Results <- sbmtFit(edgelist.time, maxComms, directed, klPerNetwork, degreeCorrect, N, tolerance)
 
     #Reformat best matrices
-    T = length(edgelist.time)
-    Results$TimeMatrices = sapply(1:T, function(x) {
-        matrix(Results$EdgeMatrix[ (maxComms^2 * (x-1) + 1) : (maxComms^2 * x) ], nrow = maxComms, ncol = maxComms)
+    Time = length(edgelist.time)
+    Results$TimeMatrices = sapply(1:Time, function(x) {
+        matrix(Results$EdgeMatrix[ (maxComms^2 * (x-1) + 1) : (maxComms^2 * x) ], nrow = maxComms, ncol = maxComms, byrow = T)
     }, simplify = F,  USE.NAMES = F)
     
     # Return found community membership in order of ID
@@ -128,6 +115,7 @@ sbmt <- function(edgelist.time, maxComms = 2, degreeCorrect = 0, directed = F, k
     Results$directed = directed
     Results$klPerNetwork = klPerNetwork
     Results$degreeCorrect = degreeCorrect
+    Results$tolerance = tolerance
     
     Results
 }
