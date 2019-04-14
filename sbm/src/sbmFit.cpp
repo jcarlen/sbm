@@ -59,6 +59,7 @@ std::vector<double> SelfEdgeCounter;
 int Nodes, MaxComms, KLPerNetwork, DegreeCorrect, T;
 bool Directed;
 double MaxScore; // records the *weight* of self-edges (not doubled) so they can be counted correctly.
+long double Tolerance; // stopping criteria for KL // this prevents loops due to numerical errors.
 
 //*********************** FUNCTION DECLARATIONS **********************************************************
 
@@ -75,7 +76,7 @@ IntegerVector randomComms(int Nodes, int MaxComms); // generates random commmuni
 
 // [[Rcpp::export]]
 
-List sbmFit(const IntegerMatrix & edgelist, const int maxComms, const int degreeCorrect, const bool directed, const int klPerNetwork, const NumericVector weights) {  //, const IntegerVector seedComms)
+List sbmFit(const IntegerMatrix & edgelist, const int maxComms, const int degreeCorrect, const bool directed, const int klPerNetwork, const NumericVector weights, const long double tolerance) {  //, const IntegerVector seedComms)
 
     int i, j, k;
     
@@ -95,6 +96,7 @@ List sbmFit(const IntegerMatrix & edgelist, const int maxComms, const int degree
     DegreeCorrect = degreeCorrect;
     Directed = directed;
     KLPerNetwork = klPerNetwork;
+    Tolerance = tolerance;
     T = 1; //time steps, if applicable
     
     /// Make space in Global Vars
@@ -283,7 +285,6 @@ void RunKL(IntegerMatrix AdjList, NumericMatrix AdjListWeight, IntegerMatrix out
     std::vector<int> UpdateIndex(Nodes, -1);
     
     double prevMaxScore = -std::numeric_limits<double>::max( );
-    long double tolerance = 0.0001; // this prevents loops due to numerical errors.
     
     double ProposalRatio;
     double value;
@@ -294,7 +295,7 @@ void RunKL(IntegerMatrix AdjList, NumericMatrix AdjListWeight, IntegerMatrix out
     // This returns the log of the initial score
     MaxScore = ComputeInitialScore();
     
-    while(MaxScore >= prevMaxScore + tolerance)
+    while(MaxScore >= prevMaxScore + Tolerance)
     {
         Rcout << "MAX SCORE IS: " << MaxScore << std::endl;
         // we start with everything equal to the best values
@@ -547,9 +548,8 @@ double ComputeInitialScore()
     
     int i,j, t;
     double sum = 0;
-    double tol = std::numeric_limits<double>::epsilon();
-    long double tolerance = 0.00000001;
-    
+    double tol = std::numeric_limits<double>::epsilon(); //not the stopping critera for KL but the critera for determining if a degree value is ~0
+
     if ( !Directed ) // this actually returns 1/2 the unnormalized log-likelihood listed in the paper
     {
         
@@ -621,7 +621,7 @@ double ComputeInitialScore()
                         bestval = (BestCommStubsTotal[i]+BestCommEndsTotal[i]) * (BestCommStubsTotal[j]+BestCommEndsTotal[j]);
                     }
                     
-                    if ( bestval > tolerance && BestEdgeMatrix[i*MaxComms+j + t*MaxComms*MaxComms] > tolerance)
+                    if ( bestval > tol && BestEdgeMatrix[i*MaxComms+j + t*MaxComms*MaxComms] > tol)
                         sum = sum - BestEdgeMatrix[i*MaxComms+j + t*MaxComms*MaxComms] * log(bestval);
                 }
                 
@@ -649,7 +649,6 @@ void ComputeNeighborSet(int vertex, int option, IntegerMatrix AdjList, NumericMa
     
     int i;
     int neighbor;
-    //double tol = std::numeric_limits<double>::epsilon();
     
     if ( !Directed )
     {
@@ -736,14 +735,12 @@ double ComputeProposal(int vertex, int from, int destination)
     double help3;
     double help4;
     
-    long double tolerance = 0.00000001;
-    
     if(from == destination)
         return 0;
     
     double degreeTotal = 0;
     double outDegreeTotal = 0;
-    
+    double tol = std::numeric_limits<double>::epsilon(); //not the stopping critera for KL but the critera for determining if a degree value is ~0
     for (int t = 0; t < T; t ++) {
         degreeTotal += Degree[vertex + Nodes*t];
     }
@@ -768,9 +765,9 @@ double ComputeProposal(int vertex, int from, int destination)
              
              // if the degree of the vertex is zero we know nothing about it
              // in this case we don't ever change its community, put all degree zeroes into their own group
-             if(DegreeCorrect == 1 && (Degree[vertex + t*Nodes] <= tolerance)) continue;
+             if(DegreeCorrect == 1 && (Degree[vertex + t*Nodes] <= tol)) continue;
              
-             if(DegreeCorrect == 2 && (degreeTotal <= tolerance)) continue;
+             if(DegreeCorrect == 2 && (degreeTotal <= tol)) continue;
              
              // we first add up all the cross-terms (between communities that are not from / destination)
              for(i=0; i < MaxComms; i++)
@@ -843,7 +840,7 @@ double ComputeProposal(int vertex, int from, int destination)
                  if (help1 < 0) Rcout << "help1 " << help1 << std::endl;
                  
                  //ratiovalue += LogFunction(help1 - help2) + LogFunction(help1);
-                 if (help1 > tolerance && help1 - help2 > tolerance)
+                 if (help1 > tol && help1 - help2 > tol)
                      ratiovalue += -(help3 - help2)*log(help1 - degreeTotal) + help3*log(help1);
              }
              
@@ -891,7 +888,7 @@ double ComputeProposal(int vertex, int from, int destination)
                  if (help1 < 0) Rcout << "help1 " << help1 << std::endl;
                  
                  //ratiovalue += LogFunction(help1 - help2) + LogFunction(help1);
-                 if (help1 > tolerance && help1 + help2 > tolerance)
+                 if (help1 > tol && help1 + help2 > tol)
                      ratiovalue += -(help3 + help2)*log(help1 + degreeTotal) + help3*log(help1);
              }
              
@@ -915,9 +912,9 @@ double ComputeProposal(int vertex, int from, int destination)
              // if the total degree of the vertex is zero we know nothing about it
              // in this case we don't ever change its community
              // at the end we put all degree zeroes into their own group
-             if(DegreeCorrect == 1 && (Degree[vertex + t*Nodes] <= tolerance && outDegree[vertex + t*Nodes] <= tolerance )) continue;
+             if(DegreeCorrect == 1 && (Degree[vertex + t*Nodes] <= tol && outDegree[vertex + t*Nodes] <= tol )) continue;
              
-             if( (DegreeCorrect == 2 | DegreeCorrect == 3) && (degreeTotal <= tolerance && outDegreeTotal <= tolerance)) continue;
+             if( (DegreeCorrect == 2 | DegreeCorrect == 3) && (degreeTotal <= tol && outDegreeTotal <= tol)) continue;
              
              // 1) Communities going into the vertex
              // we first add up all the cross-terms (between communities that are not from / destination)
@@ -1088,7 +1085,7 @@ double ComputeProposal(int vertex, int from, int destination)
                  help2 = double(Degree[vertex + t*Nodes]);
                  help3 = double(CurrentCommEnds[from + t*MaxComms]);
                  
-                 if (help1 > tolerance && help1 - help2 > tolerance)
+                 if (help1 > tol && help1 - help2 > tol)
                      ratiovalue += -(help3 - help2)*log(help1 - degreeTotal) + help3*log(help1);
              
                  ///out
@@ -1096,7 +1093,7 @@ double ComputeProposal(int vertex, int from, int destination)
                  help2 = double(outDegree[vertex + t*Nodes]);
                  help3 = double(CurrentCommStubs[from + t*MaxComms]);
                  
-                 if (help1 > tolerance && help1 - help2 > tolerance)
+                 if (help1 > tol && help1 - help2 > tol)
                      ratiovalue += -(help3 - help2)*log(help1 - outDegreeTotal) + help3*log(help1);
                  
                  // now we add in the terms corresponding to dest
@@ -1105,7 +1102,7 @@ double ComputeProposal(int vertex, int from, int destination)
                  help2 = double(Degree[vertex + t*Nodes]);
                  help3 = double(CurrentCommEnds[destination + t*MaxComms]);
                  
-                 if (help1 > tolerance && help1 + help2 > tolerance)
+                 if (help1 > tol && help1 + help2 > tol)
                      ratiovalue += -(help3 + help2)*log(help1 + degreeTotal) + help3*log(help1);
                  
                  ///out
@@ -1113,7 +1110,7 @@ double ComputeProposal(int vertex, int from, int destination)
                  help2 = double(outDegree[vertex + t*Nodes]);
                  help3 = double(CurrentCommStubs[destination + t*MaxComms]);
                  
-                 if (help1 > tolerance && help1 + help2 > tolerance)
+                 if (help1 > tol && help1 + help2 > tol)
                      ratiovalue += -(help3 + help2)*log(help1 + outDegreeTotal) + help3*log(help1);
 
                  
@@ -1127,7 +1124,7 @@ double ComputeProposal(int vertex, int from, int destination)
                  help2 = double(Degree[vertex + t*Nodes] + outDegree[vertex + t*Nodes]);
                  help3 = double(CurrentCommEnds[from + t*MaxComms] + CurrentCommStubs[from + t*MaxComms]);
                  
-                 if (help1 > tolerance && help1 - help2 > tolerance)
+                 if (help1 > tol && help1 - help2 > tol)
                      ratiovalue += -(help3 - help2)*log(help1 - degreeTotal - outDegreeTotal) + help3*log(help1);
                  
                  // now we add in the terms corresponding to dest
@@ -1136,7 +1133,7 @@ double ComputeProposal(int vertex, int from, int destination)
                  help2 = double(Degree[vertex + t*Nodes] + outDegree[vertex + t*Nodes]);
                  help3 = double(CurrentCommEnds[destination + t*MaxComms] + CurrentCommStubs[destination + t*MaxComms]);
                  
-                 if (help1 > tolerance && help1 + help2 > tolerance)
+                 if (help1 > tol && help1 + help2 > tol)
                      ratiovalue += -(help3 + help2)*log(help1 + degreeTotal + outDegreeTotal) + help3*log(help1);
              }
 

@@ -4,14 +4,15 @@
 ## along with RcppExamples.  If not, see <http://www.gnu.org/licenses/>.)
 
 ## To do: Check that seed can be set for reproducibility
-## make tolerance an argument to sbm (and sbmt)
+## Make seedComms usable for non-random initialization
 
-#' @maxComms maximum number of communities represented in the network
+# '@maxComms maximum number of communities represented in the network
 # '@degreeCorrect whether to apply the degree correction of Karrer and Newman
 # '@directed whether the network is directed and off-diagonal block parameters may be assymetrical
-#' @KLPerNetwork this is the number of KL runs on a network
+# '@KLPerNetwork this is the number of KL runs on a network
+# '@tolerance stopping criteria for KL. Prevents loops due to numerical errors.
 
-sbm <- function(edgelist, maxComms = 2, degreeCorrect = F, directed = FALSE, klPerNetwork = 50, seedComms = NULL, seed = NULL)
+sbm <- function(edgelist, maxComms = 2, degreeCorrect = F, directed = FALSE, klPerNetwork = 50, tolerance = 1e-4, seedComms = NULL, seed = NULL)
 
 {
     # Argument Checks
@@ -52,19 +53,19 @@ sbm <- function(edgelist, maxComms = 2, degreeCorrect = F, directed = FALSE, klP
         degreeCorrect = 0
         # relic of Karrer and Newman code to have degreeCorrect be 0|1
     }
-    #seed?
     
     ## Make the call...
-    Results <- sbmFit(edgelist1-1, maxComms, degreeCorrect, directed, klPerNetwork, weights)
+    Results <- sbmFit(edgelist1-1, maxComms, degreeCorrect, directed, klPerNetwork, weights, tolerance)
     
     cat("\nResults!\n")
     
     names(Results$FoundComms) = names(link.nodes) # Return found community membership in order of ID
-    Results$EdgeMatrix = matrix(Results$EdgeMatrix, maxComms, maxComms)
+    Results$EdgeMatrix = matrix(Results$EdgeMatrix, maxComms, maxComms, byrow = T)
     Results$degreeCorrect = degreeCorrect
     Results$directed = directed
     Results$klPerNetwork = klPerNetwork
     Results$weighted = weighted
+    Results$tolerance = tolerance
     
     Results
 }

@@ -15,7 +15,7 @@ List sbmtFit(SEXP edgelistTime, const IntegerMatrix & edgelistTotal, const Numer
 
 // [[Rcpp::export]]
 
-List sbmtFit(SEXP edgelistTime, const int maxComms, const bool directed, const int klPerNetwork, const int degreeCorrect, const int nodes)
+List sbmtFit(SEXP edgelistTime, const int maxComms, const bool directed, const int klPerNetwork, const int degreeCorrect, const int nodes, const long double tolerance)
 {
     int i, j, k;
     Rcpp::List EdgelistTime(edgelistTime);
@@ -27,6 +27,7 @@ List sbmtFit(SEXP edgelistTime, const int maxComms, const bool directed, const i
     Directed = directed;
     KLPerNetwork = klPerNetwork;
     DegreeCorrect = degreeCorrect;
+    Tolerance = tolerance;
     
     Setup(Nodes, MaxComms, Directed);
     
@@ -158,7 +159,6 @@ List sbmtFit(SEXP edgelistTime, const int maxComms, const bool directed, const i
     std::vector<double> SavedCommStubs(MaxComms, 0.0);
     std::vector<double> SavedCommEnds(MaxComms, 0.0);
     std::vector<double> SavedEdgeMatrix(MaxComms*MaxComms, 0.0);
-    long double tolerance = .1; //0.00000001; // this prevents loops due to numerical errors.
     double HighestScore = -std::numeric_limits<double>::max( );
 
     for (int KL = 0; KL < KLPerNetwork; KL++)
@@ -175,7 +175,7 @@ List sbmtFit(SEXP edgelistTime, const int maxComms, const bool directed, const i
         MaxScore = ComputeInitialScore();
         Rcout << "InitialScore: " << MaxScore << std:: endl;
         
-        while(MaxScore >= prevMaxScore + tolerance)
+        while(MaxScore >= prevMaxScore + Tolerance)
         {
             Rcout << "MAX SCORE IS: " << MaxScore << std::endl;
             

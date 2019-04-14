@@ -42,6 +42,7 @@ extern std::vector<double> SelfEdgeCounter;
 extern int Nodes, MaxComms, KLPerNetwork, DegreeCorrect, T;
 extern bool Directed;
 extern double MaxScore; // records the *weight* of self-edges (not doubled) so they can be counted correctly.
+extern long double Tolerance; // stopping criteria for KL // this prevents loops due to numerical errors.
 
 //------------------------------------------------------------------------------------------------------------------------------------------------
 
