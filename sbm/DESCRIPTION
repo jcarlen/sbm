@@ -6,7 +6,8 @@ Author: Jane Carlen
 Maintainer: Jane Carlen <jcarlen@ucla.edu>
 License: GPL-3 
 SystemRequirements:
-Imports: Rcpp (>= 0.11.0)
-Suggets: 
+Imports: Rcpp (>= 0.11.0), 
+Suggets: testthat (>= 1.0)
 LinkingTo: Rcpp
 Others: 
+RoxygenNote: 6.1.1

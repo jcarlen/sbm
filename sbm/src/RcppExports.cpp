@@ -6,8 +6,8 @@
 using namespace Rcpp;
 
 // sbmFit
-List sbmFit(const IntegerMatrix& edgelist, const int maxComms, const int degreeCorrect, const bool directed, const int klPerNetwork, const NumericVector weights);
-RcppExport SEXP _sbm_sbmFit(SEXP edgelistSEXP, SEXP maxCommsSEXP, SEXP degreeCorrectSEXP, SEXP directedSEXP, SEXP klPerNetworkSEXP, SEXP weightsSEXP) {
+List sbmFit(const IntegerMatrix& edgelist, const int maxComms, const int degreeCorrect, const bool directed, const int klPerNetwork, const NumericVector weights, const long double tolerance);
+RcppExport SEXP _sbm_sbmFit(SEXP edgelistSEXP, SEXP maxCommsSEXP, SEXP degreeCorrectSEXP, SEXP directedSEXP, SEXP klPerNetworkSEXP, SEXP weightsSEXP, SEXP toleranceSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -17,13 +17,14 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< const bool >::type directed(directedSEXP);
     Rcpp::traits::input_parameter< const int >::type klPerNetwork(klPerNetworkSEXP);
     Rcpp::traits::input_parameter< const NumericVector >::type weights(weightsSEXP);
-    rcpp_result_gen = Rcpp::wrap(sbmFit(edgelist, maxComms, degreeCorrect, directed, klPerNetwork, weights));
+    Rcpp::traits::input_parameter< const long double >::type tolerance(toleranceSEXP);
+    rcpp_result_gen = Rcpp::wrap(sbmFit(edgelist, maxComms, degreeCorrect, directed, klPerNetwork, weights, tolerance));
     return rcpp_result_gen;
 END_RCPP
 }
 // sbmtFit
-List sbmtFit(SEXP edgelistTime, const int maxComms, const bool directed, const int klPerNetwork, const int degreeCorrect, const int nodes);
-RcppExport SEXP _sbm_sbmtFit(SEXP edgelistTimeSEXP, SEXP maxCommsSEXP, SEXP directedSEXP, SEXP klPerNetworkSEXP, SEXP degreeCorrectSEXP, SEXP nodesSEXP) {
+List sbmtFit(SEXP edgelistTime, const int maxComms, const bool directed, const int klPerNetwork, const int degreeCorrect, const int nodes, const long double tolerance);
+RcppExport SEXP _sbm_sbmtFit(SEXP edgelistTimeSEXP, SEXP maxCommsSEXP, SEXP directedSEXP, SEXP klPerNetworkSEXP, SEXP degreeCorrectSEXP, SEXP nodesSEXP, SEXP toleranceSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -33,14 +34,15 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< const int >::type klPerNetwork(klPerNetworkSEXP);
     Rcpp::traits::input_parameter< const int >::type degreeCorrect(degreeCorrectSEXP);
     Rcpp::traits::input_parameter< const int >::type nodes(nodesSEXP);
-    rcpp_result_gen = Rcpp::wrap(sbmtFit(edgelistTime, maxComms, directed, klPerNetwork, degreeCorrect, nodes));
+    Rcpp::traits::input_parameter< const long double >::type tolerance(toleranceSEXP);
+    rcpp_result_gen = Rcpp::wrap(sbmtFit(edgelistTime, maxComms, directed, klPerNetwork, degreeCorrect, nodes, tolerance));
     return rcpp_result_gen;
 END_RCPP
 }
 
 static const R_CallMethodDef CallEntries[] = {
-    {"_sbm_sbmFit", (DL_FUNC) &_sbm_sbmFit, 6},
-    {"_sbm_sbmtFit", (DL_FUNC) &_sbm_sbmtFit, 6},
+    {"_sbm_sbmFit", (DL_FUNC) &_sbm_sbmFit, 7},
+    {"_sbm_sbmtFit", (DL_FUNC) &_sbm_sbmtFit, 7},
     {NULL, NULL, 0}
 };
 
