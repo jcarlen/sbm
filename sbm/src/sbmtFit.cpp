@@ -156,9 +156,9 @@ List sbmtFit(SEXP edgelistTime, const int maxComms, const bool directed, const i
     // For reporting best state
     std::vector<int> SavedState(Nodes, 0);
     std::vector<int> SavedCommVertices(MaxComms, 0);
-    std::vector<double> SavedCommStubs(MaxComms, 0.0);
-    std::vector<double> SavedCommEnds(MaxComms, 0.0);
-    std::vector<double> SavedEdgeMatrix(MaxComms*MaxComms, 0.0);
+    std::vector<double> SavedCommStubs(T*MaxComms, 0.0);
+    std::vector<double> SavedCommEnds(T*MaxComms, 0.0);
+    std::vector<double> SavedEdgeMatrix(T*MaxComms*MaxComms, 0.0);
     double HighestScore = -std::numeric_limits<double>::max( );
 
     for (int KL = 0; KL < KLPerNetwork; KL++)
@@ -372,11 +372,16 @@ List sbmtFit(SEXP edgelistTime, const int maxComms, const bool directed, const i
             
         {
             SavedCommVertices[i] = BestCommVertices[i];
-            SavedCommStubs[i] = BestCommStubs[i];
-            if (Directed) SavedCommEnds[i] = BestCommEnds[i];
-            for(k=0; k < MaxComms; k++)
-                SavedEdgeMatrix[i*MaxComms+k] = BestEdgeMatrix[i*MaxComms+k];
+          
+            for (t = 0; t < T; t++) {
+              SavedCommStubs[i + t*MaxComms] = BestCommStubs[i + t*MaxComms];
+              if (Directed) SavedCommEnds[i + t*MaxComms] = BestCommEnds[i + t*MaxComms];
+              for(k=0; k < MaxComms; k++) {
+                SavedEdgeMatrix[i*MaxComms + k + t*MaxComms*MaxComms] = BestEdgeMatrix[i*MaxComms + k + t*MaxComms*MaxComms];
+              }
+            }
         }
+        
         for(i=0; i < Nodes; i++)
             SavedState[i] = BestState[i];
     }
@@ -384,10 +389,13 @@ List sbmtFit(SEXP edgelistTime, const int maxComms, const bool directed, const i
         for(i=0; i < MaxComms; i++)
         {
             BestCommVertices[i] = SavedCommVertices[i];
-            BestCommStubs[i] = SavedCommStubs[i];
-            if (Directed) SavedCommEnds[i] = BestCommEnds[i];
-            for(k=0; k < MaxComms; k++)
-                BestEdgeMatrix[i*MaxComms+k] = SavedEdgeMatrix[i*MaxComms+k];
+            for (t = 0; t < T; t++) {
+                BestCommStubs[i + t*MaxComms] = SavedCommStubs[i + t*MaxComms];
+                if (Directed) SavedCommEnds[i + t*MaxComms] = BestCommEnds[i] + t*MaxComms;
+                for(k=0; k < MaxComms; k++) {
+                  BestEdgeMatrix[i*MaxComms+k + t*MaxComms*MaxComms] = SavedEdgeMatrix[i*MaxComms+k + t*MaxComms*MaxComms];
+                }
+            }
         }
 }
     for(i=0; i < Nodes; i++)
