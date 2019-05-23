@@ -10,7 +10,7 @@
 #' @selfects If true, allow non-zero diagonal of converted adjacency matrices. If false zeros out the diagonal.
 #' @as.array If true, return an N x N x Time array instead of a list of adjacency matrices.
 
-edeglist_to_adj <- function(edgelist, selfedges = FALSE, as.array = TRUE, directed = TRUE) {
+edgelist_to_adj <- function(edgelist, selfedges = FALSE, as.array = TRUE, directed = TRUE) {
   Time = length(edgelist)
   E = do.call("rbind", edgelist)
   S = unique(c(as.character(E[,1]), as.character(E[,2])))
@@ -55,6 +55,23 @@ td_sbm_llik_t <- function(A_t, mu, K = 2) {
   return(term1 - term2)
 }
 
+# Calculate number of parameters for discrete model
+#' @N number of nodes
+#' @K number of blocks
+#' @Time number of time slices
+tdd_n_param <- function(N, K, Time) {
+  K*N - K + Time*K^2
+}
+
+# Calculate number of parameters for mixed model
+#' @N number of nodes
+#' @K number of blocks
+#' @Time number of time slices
+tdmm_n_param <- function(N, K, Time) {
+  2*N - K + Time*K^2
+}
+
+
 # ------------------------------- Functions (mixed-membership TDMM-SBM) ----------------------------------------------
 
 #' @C is a N x K matrix of mixed group membership whose columsn sum to 1
@@ -63,22 +80,37 @@ td_sbm_llik_t <- function(A_t, mu, K = 2) {
 #' @K is the number of blocks
 #' 
 
-tdmm_sbm_llik <- function(A, C, omega, K = ncol(C), N = dim(A)[1], Time = dim(A)[3]) {
+tdmm_sbm_llik <- function(A, C, omega) {
+  
+  N = dim(A)[1]
+  Time = dim(A)[3]
+  K = ncol(C)
+  if ( !identical(sort(rownames(C)), sort(rownames(A))) ) {stop("A and C should have matching rownames")}
+  C = as.matrix(C[rownames(A),])
+  omega = array(unlist(t(omega)), dim = c(K,K,Time)) #time period starts as a row, ends up as [,,t]
+  
   lik = sum(
     sapply(1:Time, function(t) {
-      w_t = matrix(omega[,,t], K, K)
-      mu_t = C %*% w_t %*% t(C)
+      mu_t = C %*% t(omega[,,t]) %*% t(C)
       td_sbm_llik_t(A[,,t], mu_t, K = K)
     })
   ) 
   return(lik)
 }
 
+
 # ---------------------------------- Functions (discrete membership TDD-SBM) -----------------------------------------
 
 #' @A is a A (time) series of network data represented  as N x N x Time array.
 
-tdd_sbm_llik <- function(A, roles, omega,  K = length(unique(roles)), N = dim(A)[1], Time = dim(A)[3]) {
+tdd_sbm_llik <- function(A, roles, omega) {
+  
+  N = dim(A)[1]
+  Time = dim(A)[3]
+  K = length(unique(roles))
+  
+  omega = array(unlist(omega), dim = c(K,K,Time)) #make array if not already
+  roles = roles[rownames(A)] # put into same order as A if not already
   
   A_total = apply(A, c(1,2), sum)
   degree_total = colSums(A_total) + rowSums(A_total)
@@ -89,7 +121,7 @@ tdd_sbm_llik <- function(A, roles, omega,  K = length(unique(roles)), N = dim(A)
   theta = (role_degree %>% group_by(role) %>% mutate(theta = degree_total/sum(degree_total)))$theta
   
   lik = sum(
-          sapply(1:Time, function(t) { #small constant added to omega prevents degenerate calculation
+          sapply(1:Time, function(t) {
             mu_t = diag(theta) %*% matrix( (omega[,,t])[as.matrix(expand.grid(role_degree$role, role_degree$role))], N, N) %*% diag(theta)
             td_sbm_llik_t(A[,,t], mu_t, K)
           })
@@ -108,10 +140,10 @@ tdd_sbm_llik <- function(A, roles, omega,  K = length(unique(roles)), N = dim(A)
 # # discrete ----
 # 
 # model1 =  sbmt(la_byhour_edgelist,  degreeCorrect = 3, directed = T, klPerNetwork = 5, maxComms = 3)
-# roles = model1$FoundComms[rownames(A)]
+# roles = model1$FoundComms #will be reordered
 # K = length(unique(roles))
-# omega = array(unlist(model1$TimeMatrices), dim = c(K,K,Time))
-# tdd_sbm_llik(A, roles[rownames(A)], omega, K = length(unique(roles)), N = dim(A)[1], Time = dim(A)[3])
+# omega = model1$TimeMatrices
+# tdd_sbm_llik( A = edgelist_to_adj(la_byhour_edgelist), model1$FoundComms, omega)
 # 
 # # mixed ----
 # # from python output
