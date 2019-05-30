@@ -1,12 +1,12 @@
-Package: sbm
+Package: sbmt
 Title: Fit stochastic blockmodels with options for degree correction, directed, and time-dependent networks
-Description: TBD
+Description: Fit time-dependent and static stochastic block models with discrete and mixed membership as introduced in []. 
 Version: 0.0
 Author: Jane Carlen
 Maintainer: Jane Carlen <jcarlen@ucla.edu>
 License: GPL-3 
 SystemRequirements:
-Imports: Rcpp (>= 0.11.0), 
+Imports: Rcpp (>= 0.11.0)
 Suggets: testthat (>= 1.0)
 LinkingTo: Rcpp
 Others: 

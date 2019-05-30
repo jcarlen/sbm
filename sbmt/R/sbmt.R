@@ -11,36 +11,24 @@
 ##        Update la edgelist in sbm package to agree with paper (la_byhour)
 ##        Implement undirected degree correction for static sbm on directed network?
 
-#' @KLPerNetwork this is the number of KL runs on a network
-#' @maxComms maximum number of communities represented in the network
-#' @seedComms user-supplied starting values for KL runs. NOT YET IMPLEMENTED.
-#' @directed whether the network is directed and off-diagonal block parameters may be assymetrical
-#' @degreeCorrect whether to apply degree correction.:
-#' \itemize {
-#'   \itme 0 = no degree correction
+#' Estimate parameters of the TDD-SBM (time-dependent discrete stochastic block model) by Kernighan-Lin algorithm.
+#
+#' @param klPerNetwork this is the number of KL runs on a network
+#' @param maxComms maximum number of communities represented in the network
+#' @param seedComms user-supplied starting values for KL runs. NOT YET IMPLEMENTED.
+#' @param directed whether the network is directed and off-diagonal block parameters may be assymetrical
+#' @param degreeCorrect whether to apply degree correction.:
+#' \itemize{
+#'   \item 0 = no degree correction
 #'   \item 1 = the degree correction of Karrer and Newman at every time step
 #'   \item 2 = time-independent degree correction over time-dependent data - inherets directedness of graph
 #'   \item 3 = time-independent degree correction over time-dependent data - undirected regardless
-#  }
-# '@tolerance stopping criteria for KL. Prevents loops due to numerical errors.
-# '@seed a random seet set for reproducibility. (Implemented?)
-
-
-
-#' @param method2 one of:
-#' \itemize{
-#'   \item method1 - very long text here
-#'   \item method2 - very long text here
-#'   \item method3 - very long text here
-#'   \item method4 - very long text here
-#'   \item method5 - very long text here
-#'   \item method6 - very long text here
-#'   \item method7 - very long text here
-#'   \item method8 - very long text here
-#'   \item method9 - very long text here
-#'   \item method10 - very long text here
-#' }
-
+#'}
+#'@param tolerance stopping criteria for KL. Prevents loops due to numerical errors.
+#'@param seed a random seet set for reproducibility. (Implemented?)
+#
+#'@return FoundComms is a vector of node labels with estimated block assignments.
+#'@return EdgeMatrix is 
 sbmt <- function(edgelist.time, maxComms = 2, degreeCorrect = 0, directed = F, klPerNetwork = 50, tolerance = 1e-4, seedComms = NULL, seed = NULL) {
     
         #check it's the right type of data/list format
@@ -105,7 +93,7 @@ sbmt <- function(edgelist.time, maxComms = 2, degreeCorrect = 0, directed = F, k
 
     #Reformat best matrices
     Time = length(edgelist.time)
-    Results$TimeMatrices = sapply(1:Time, function(x) {
+    Results$EdgeMatrix= sapply(1:Time, function(x) {
         matrix(Results$EdgeMatrix[ (maxComms^2 * (x-1) + 1) : (maxComms^2 * x) ], nrow = maxComms, ncol = maxComms, byrow = T)
     }, simplify = F,  USE.NAMES = F)
     
@@ -121,7 +109,7 @@ sbmt <- function(edgelist.time, maxComms = 2, degreeCorrect = 0, directed = F, k
 }
 
 
-# The overall process vis sbmt/:
+# The overall process via sbmt/:
 
     # We have three sets of parameters
     # g - cluster membership
