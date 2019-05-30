@@ -1,4 +1,4 @@
-library(sbm)
+library(sbmt)
 data(zach)
 data(zach_weighted)
 

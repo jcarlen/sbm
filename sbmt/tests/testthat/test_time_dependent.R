@@ -1,4 +1,4 @@
-library(sbm)
+library(sbmt)
 data(la_byhour_edgelist)
 
 test_that("sbmt on uncorrected, weighted, time-dependent network", {
