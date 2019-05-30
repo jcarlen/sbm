@@ -2,10 +2,10 @@
 # Generator token: 10BE3573-1514-4C36-9D1C-5A225CD40393
 
 sbmFit <- function(edgelist, maxComms, degreeCorrect, directed, klPerNetwork, weights, tolerance) {
-    .Call('_sbm_sbmFit', PACKAGE = 'sbm', edgelist, maxComms, degreeCorrect, directed, klPerNetwork, weights, tolerance)
+    .Call('_sbmt_sbmFit', PACKAGE = 'sbmt', edgelist, maxComms, degreeCorrect, directed, klPerNetwork, weights, tolerance)
 }
 
 sbmtFit <- function(edgelistTime, maxComms, directed, klPerNetwork, degreeCorrect, nodes, tolerance) {
-    .Call('_sbm_sbmtFit', PACKAGE = 'sbm', edgelistTime, maxComms, directed, klPerNetwork, degreeCorrect, nodes, tolerance)
+    .Call('_sbmt_sbmtFit', PACKAGE = 'sbmt', edgelistTime, maxComms, directed, klPerNetwork, degreeCorrect, nodes, tolerance)
 }
 

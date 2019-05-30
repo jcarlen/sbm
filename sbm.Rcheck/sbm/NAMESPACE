@@ -1,5 +1,0 @@
-useDynLib(sbm)
-
-exportPattern("^[[:alpha:]]+")
-
-importFrom(Rcpp, evalCpp)
