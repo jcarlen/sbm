@@ -6,6 +6,8 @@
 ## To do: Check that seed can be set for reproducibility
 ## Make seedComms usable for non-random initialization
 
+#' Estimate parameters of a static SBM by Kernighan-Lin algorithm. Allows for directed networks and degree correction.
+#
 # '@maxComms maximum number of communities represented in the network
 # '@degreeCorrect whether to apply the degree correction of Karrer and Newman
 # '@directed whether the network is directed and off-diagonal block parameters may be assymetrical

@@ -3,3 +3,5 @@ useDynLib(sbm)
 exportPattern("^[[:alpha:]]+")
 
 importFrom(Rcpp, evalCpp)
+
+importFrom("stats", "aggregate")
