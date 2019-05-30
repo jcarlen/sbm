@@ -9,6 +9,8 @@ sbmt(edgelist.time, maxComms = 2, degreeCorrect = 0, directed = F,
   seed = NULL)
 }
 \arguments{
+\item{edgelist.time}{Time-sliced network to model, formatted as a list of networks in edgelist format}
+
 \item{maxComms}{maximum number of communities represented in the network}
 
 \item{degreeCorrect}{whether to apply degree correction.:

@@ -1,4 +1,4 @@
-useDynLib(sbm)
+useDynLib(sbmt)
 
 exportPattern("^[[:alpha:]]+")
 

@@ -13,6 +13,7 @@
 
 #' Estimate parameters of the TDD-SBM (time-dependent discrete stochastic block model) by Kernighan-Lin algorithm.
 #
+#' @param edgelist.time Time-sliced network to model, formatted as a list of networks in edgelist format
 #' @param klPerNetwork this is the number of KL runs on a network
 #' @param maxComms maximum number of communities represented in the network
 #' @param seedComms user-supplied starting values for KL runs. NOT YET IMPLEMENTED.
