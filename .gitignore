@@ -1,1 +1,3 @@
- 
+sbmt/src/*.so
+sbmt/src/*.o
+sbmt/src/symbols.rds
