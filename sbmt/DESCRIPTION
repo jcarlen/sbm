@@ -4,7 +4,7 @@ Description: Fit time-dependent and static stochastic block models with discrete
 Version: 0.0
 Author: Jane Carlen
 Maintainer: Jane Carlen <jcarlen@ucla.edu>
-License: GPL-3 
+License: GPL-2
 SystemRequirements:
 Imports: Rcpp (>= 0.11.0)
 Suggets: testthat (>= 1.0)

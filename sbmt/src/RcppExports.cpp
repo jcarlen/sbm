@@ -7,7 +7,7 @@ using namespace Rcpp;
 
 // sbmFit
 List sbmFit(const IntegerMatrix& edgelist, const int maxComms, const int degreeCorrect, const bool directed, const int klPerNetwork, const NumericVector weights, const long double tolerance);
-RcppExport SEXP _sbm_sbmFit(SEXP edgelistSEXP, SEXP maxCommsSEXP, SEXP degreeCorrectSEXP, SEXP directedSEXP, SEXP klPerNetworkSEXP, SEXP weightsSEXP, SEXP toleranceSEXP) {
+RcppExport SEXP _sbmt_sbmFit(SEXP edgelistSEXP, SEXP maxCommsSEXP, SEXP degreeCorrectSEXP, SEXP directedSEXP, SEXP klPerNetworkSEXP, SEXP weightsSEXP, SEXP toleranceSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -24,7 +24,7 @@ END_RCPP
 }
 // sbmtFit
 List sbmtFit(SEXP edgelistTime, const int maxComms, const bool directed, const int klPerNetwork, const int degreeCorrect, const int nodes, const long double tolerance);
-RcppExport SEXP _sbm_sbmtFit(SEXP edgelistTimeSEXP, SEXP maxCommsSEXP, SEXP directedSEXP, SEXP klPerNetworkSEXP, SEXP degreeCorrectSEXP, SEXP nodesSEXP, SEXP toleranceSEXP) {
+RcppExport SEXP _sbmt_sbmtFit(SEXP edgelistTimeSEXP, SEXP maxCommsSEXP, SEXP directedSEXP, SEXP klPerNetworkSEXP, SEXP degreeCorrectSEXP, SEXP nodesSEXP, SEXP toleranceSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -41,12 +41,12 @@ END_RCPP
 }
 
 static const R_CallMethodDef CallEntries[] = {
-    {"_sbm_sbmFit", (DL_FUNC) &_sbm_sbmFit, 7},
-    {"_sbm_sbmtFit", (DL_FUNC) &_sbm_sbmtFit, 7},
+    {"_sbmt_sbmFit", (DL_FUNC) &_sbmt_sbmFit, 7},
+    {"_sbmt_sbmtFit", (DL_FUNC) &_sbmt_sbmtFit, 7},
     {NULL, NULL, 0}
 };
 
-RcppExport void R_init_sbm(DllInfo *dll) {
+RcppExport void R_init_sbmt(DllInfo *dll) {
     R_registerRoutines(dll, NULL, CallEntries, NULL, NULL);
     R_useDynamicSymbols(dll, FALSE);
 }
