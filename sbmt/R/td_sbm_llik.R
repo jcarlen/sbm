@@ -43,7 +43,7 @@ edgelist_to_adj <- function(edgelist, selfedges = FALSE, as.array = TRUE, direct
   } else {return(adjlist)}  
 }
 
-#' Calculate log-likelihood for a single timeslice given mu as input (works for discrete or continuous). Helper for tdd_sbm_llik and tdmm_sbm_llik
+#' Calculate the un-normalized log-likelihood for a single timeslice given mu as input (works for discrete or continuous). Helper for tdd_sbm_llik and tdmm_sbm_llik
 #' #
 #' @param A_t is a single-time network, represented as a N x N adjacency matrix
 #' @param mu mu is a N x N matrix of edge expected values at this time slice
@@ -81,7 +81,7 @@ tdmm_n_param <- function(N, K, Time) {
 
 # ---------------------------------- Functions (discrete membership TDD-SBM) -----------------------------------------
 
-#' Calculate log-likelihood of TDD-SBM (time-dependent discrete-membership stochastic block model)
+#' Calculate un-normalized log-likelihood for a TDD-SBM (time-dependent discrete-membership stochastic block model)
 #
 #' @param A (time) series of network data represented  as N x N x Time array.
 #' @param roles is a length-N list of estimated block assignment for each node
@@ -119,7 +119,7 @@ tdd_sbm_llik <- function(A, roles, omega) {
 
 # ------------------------------- Functions (mixed-membership TDMM-SBM) ----------------------------------------------
 
-#' Calculate log-likelihood of TDMM-SBM (time-dependent mixed-membership stochastic block model)
+#' Calculate un-normalized log-likelihood for a TDMM-SBM (time-dependent mixed-membership stochastic block model)
 #
 #' @param A is a A (time) series of network data represented  as N x N x Time array.
 #' @param C is a N x K matrix of mixed group membership whose columns sum to 1
