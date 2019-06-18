@@ -2,7 +2,7 @@
 % Please edit documentation in R/td_sbm_llik.R
 \name{tdmm_sbm_llik}
 \alias{tdmm_sbm_llik}
-\title{Calculate log-likelihood of TDMM-SBM (time-dependent mixed-membership stochastic block model)}
+\title{Calculate un-normalized log-likelihood for a TDMM-SBM (time-dependent mixed-membership stochastic block model)}
 \usage{
 tdmm_sbm_llik(A, C, omega)
 }
@@ -14,7 +14,7 @@ tdmm_sbm_llik(A, C, omega)
 \item{omega}{is a Time x K x K array describing block-to-block traffic at each time period or Time-length list of K x K matrices.}
 }
 \description{
-Calculate log-likelihood of TDMM-SBM (time-dependent mixed-membership stochastic block model)
+Calculate un-normalized log-likelihood for a TDMM-SBM (time-dependent mixed-membership stochastic block model)
 }
 \examples{
 # Uses output from python implementation (slighly reformatted)

@@ -2,7 +2,7 @@
 % Please edit documentation in R/td_sbm_llik.R
 \name{tdd_sbm_llik}
 \alias{tdd_sbm_llik}
-\title{Calculate log-likelihood of TDD-SBM (time-dependent discrete-membership stochastic block model)}
+\title{Calculate un-normalized log-likelihood for a TDD-SBM (time-dependent discrete-membership stochastic block model)}
 \usage{
 tdd_sbm_llik(A, roles, omega)
 }
@@ -18,5 +18,5 @@ model1 = sbmt(la_byhour_edgelist,  degreeCorrect = 3, directed = T, klPerNetwork
 tdd_sbm_llik(A, model1$FoundComms, model1$EdgeMatrix)}
 }
 \description{
-Calculate log-likelihood of TDD-SBM (time-dependent discrete-membership stochastic block model)
+Calculate un-normalized log-likelihood for a TDD-SBM (time-dependent discrete-membership stochastic block model)
 }
