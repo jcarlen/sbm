@@ -510,7 +510,7 @@ void InitializeKLt(List AdjListT, List AdjListWeightT)
                     NumericMatrix tmpw = AdjListWeightT[t];
                     
                     BestEdgeMatrix[(BestState[neighbor]) * MaxComms + BestState[i] + t*MaxComms*MaxComms] += tmpw(i, j);
-                    // sum += AdjListWeight(i, j); /// Note self-edges get counted ONCE because we're only interating over out-edges
+                    // sum += AdjListWeight(i, j); /// Note  -edges get counted ONCE because we're only interating over out-edges
                     
                     /// count self edges twice?
                     if (i == neighbor && SelfTwice == 2) {

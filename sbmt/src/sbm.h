@@ -37,11 +37,11 @@ extern std::vector<double> outNeighborSet;
 extern std::vector<double> BestEdgeMatrix;
 extern std::vector<double> CurrentEdgeMatrix;
 
-extern std::vector<double> SelfEdgeCounter;
+extern std::vector<double> SelfEdgeCounter; // records the *weight* of self-edges (not doubled) so they can be counted correctly.
 
 extern int Nodes, MaxComms, KLPerNetwork, DegreeCorrect, T;
 extern bool Directed;
-extern double MaxScore; // records the *weight* of self-edges (not doubled) so they can be counted correctly.
+extern double MaxScore; 
 extern long double Tolerance; // stopping criteria for KL // this prevents loops due to numerical errors.
 
 //------------------------------------------------------------------------------------------------------------------------------------------------

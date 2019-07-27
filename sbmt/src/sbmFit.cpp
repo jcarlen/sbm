@@ -54,11 +54,11 @@ std::vector<double> outNeighborSet;
 std::vector<double> BestEdgeMatrix;
 std::vector<double> CurrentEdgeMatrix;
 
-std::vector<double> SelfEdgeCounter;
+std::vector<double> SelfEdgeCounter; // records the *weight* of self-edges (not doubled) so they can be counted correctly.
 
 int Nodes, MaxComms, KLPerNetwork, DegreeCorrect, T;
 bool Directed;
-double MaxScore; // records the *weight* of self-edges (not doubled) so they can be counted correctly.
+double MaxScore; 
 long double Tolerance; // stopping criteria for KL // this prevents loops due to numerical errors.
 
 //*********************** FUNCTION DECLARATIONS **********************************************************
