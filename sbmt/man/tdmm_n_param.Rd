@@ -4,7 +4,7 @@
 \alias{tdmm_n_param}
 \title{Calculate number of parameters for mixed model}
 \usage{
-tdmm_n_param(N, K, Time)
+tdmm_n_param(N, K, Time, directed = TRUE)
 }
 \arguments{
 \item{N}{number of nodes}
@@ -12,6 +12,8 @@ tdmm_n_param(N, K, Time)
 \item{K}{number of blocks}
 
 \item{Time}{number of time slices}
+
+\item{directed}{Is the network directed?}
 }
 \description{
 Calculate number of parameters for mixed model

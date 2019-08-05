@@ -4,17 +4,17 @@
 \alias{edgelist_to_adj}
 \title{Convert time-sliced edgelist to time-sliced adjacency matrix (helper for likelihood functions)}
 \usage{
-edgelist_to_adj(edgelist, selfedges = FALSE, as.array = TRUE,
+edgelist_to_adj(edgelist, selfedges = TRUE, as.array = TRUE,
   directed = TRUE)
 }
 \arguments{
 \item{edgelist}{A (time) series of network data represented as a list of edgelists. Assumes all edgelist slices have same names and number of columns, first two columns designate "from" and "to" for edges and third, if present, is count.}
 
-\item{selfedges}{If true, allow non-zero diagonal of converted adjacency matrices. If false zeros out the diagonal.}
+\item{selfedges}{If true, include self-edges in edgelist in converted adjacency matrix. If false, diagonal of adjaceny matrix is zero.}
 
 \item{as.array}{If true, return an N x N x Time array instead of a list of adjacency matrices.}
 
-\item{directed}{Only designed for this as TRUE at the moment}
+\item{directed}{Are the edges in the edgelist directed?}
 }
 \description{
 Convert time-sliced edgelist to time-sliced adjacency matrix (helper for likelihood functions)

@@ -4,7 +4,7 @@
 \alias{tdmm_sbm_llik}
 \title{Calculate un-normalized log-likelihood for a TDMM-SBM (time-dependent mixed-membership stochastic block model)}
 \usage{
-tdmm_sbm_llik(A, C, omega)
+tdmm_sbm_llik(A, C, omega, directed = TRUE, selfEdges = TRUE)
 }
 \arguments{
 \item{A}{is a A (time) series of network data represented  as N x N x Time array.}
@@ -12,6 +12,10 @@ tdmm_sbm_llik(A, C, omega)
 \item{C}{is a N x K matrix of mixed group membership whose columns sum to 1}
 
 \item{omega}{is a Time x K x K array describing block-to-block traffic at each time period or Time-length list of K x K matrices.}
+
+\item{directed}{Is the network directed?}
+
+\item{selfEdges}{is whether to sum over self-edge indices in the likelihood calculation, or exclude them}
 }
 \description{
 Calculate un-normalized log-likelihood for a TDMM-SBM (time-dependent mixed-membership stochastic block model)

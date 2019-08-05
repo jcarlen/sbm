@@ -5,14 +5,16 @@
 \title{Calculate the un-normalized log-likelihood for a single timeslice given mu as input (works for discrete or continuous). Helper for tdd_sbm_llik and tdmm_sbm_llik
 #}
 \usage{
-td_sbm_llik_t(A_t, mu, K = 2)
+td_sbm_llik_t(A_t, mu, directed = TRUE, selfEdges = TRUE)
 }
 \arguments{
 \item{A_t}{is a single-time network, represented as a N x N adjacency matrix}
 
 \item{mu}{mu is a N x N matrix of edge expected values at this time slice}
 
-\item{K}{is the number of blocks}
+\item{directed}{Are the edges in the edgelist directed?}
+
+\item{selfEdges}{is whether to sum over self-edge indices in the likelihood calculation, or exclude them}
 }
 \description{
 Calculate the un-normalized log-likelihood for a single timeslice given mu as input (works for discrete or continuous). Helper for tdd_sbm_llik and tdmm_sbm_llik

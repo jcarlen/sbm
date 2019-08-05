@@ -4,19 +4,26 @@
 \alias{tdd_sbm_llik}
 \title{Calculate un-normalized log-likelihood for a TDD-SBM (time-dependent discrete-membership stochastic block model)}
 \usage{
-tdd_sbm_llik(A, roles, omega)
+tdd_sbm_llik(A, roles, omega, directed = TRUE, selfEdges = TRUE)
 }
 \arguments{
 \item{A}{(time) series of network data represented  as N x N x Time array.}
 
 \item{roles}{is a length-N list of estimated block assignment for each node}
 
-\item{omega}{is a Time x K x K array describing block-to-block traffic at each time period or Time-length list of K x K matrices.
-data("la_byhour_edgelist")
-A = edgelist_to_adj(la_byhour_edgelist, as.array = TRUE)
-model1 = sbmt(la_byhour_edgelist,  degreeCorrect = 3, directed = T, klPerNetwork = 2, maxComms = 3)
-tdd_sbm_llik(A, model1$FoundComms, model1$EdgeMatrix)}
+\item{omega}{is a Time x K x K array describing block-to-block traffic at each time period or Time-length list of K x K matrices.}
+
+\item{directed}{Is the network directed?}
+
+\item{selfEdges}{is whether to sum over self-edge indices in the likelihood calculation, or exclude them}
 }
 \description{
 Calculate un-normalized log-likelihood for a TDD-SBM (time-dependent discrete-membership stochastic block model)
+}
+\examples{
+data("la_byhour_edgelist")
+A = edgelist_to_adj(la_byhour_edgelist, as.array = TRUE)
+model1 = sbmt(la_byhour_edgelist,  degreeCorrect = 3, directed = TRUE, klPerNetwork = 2, maxComms = 3)
+tdd_sbm_llik(A, model1$FoundComms, model1$EdgeMatrix)
+
 }

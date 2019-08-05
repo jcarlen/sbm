@@ -9,19 +9,17 @@
 #' Convert time-sliced edgelist to time-sliced adjacency matrix (helper for likelihood functions)
 #
 #' @param edgelist A (time) series of network data represented as a list of edgelists. Assumes all edgelist slices have same names and number of columns, first two columns designate "from" and "to" for edges and third, if present, is count.
-#' @param selfedges If true, allow non-zero diagonal of converted adjacency matrices. If false zeros out the diagonal.
+#' @param selfedges If true, include self-edges in edgelist in converted adjacency matrix. If false, diagonal of adjaceny matrix is zero.
 #' @param as.array If true, return an N x N x Time array instead of a list of adjacency matrices.
-#' @param directed Only designed for this as TRUE at the moment
+#' @param directed Are the edges in the edgelist directed?
 #'
-edgelist_to_adj <- function(edgelist, selfedges = FALSE, as.array = TRUE, directed = TRUE) {
-  if (directed != TRUE) {stop("Currently this function only works with directed edgelists.")}
+edgelist_to_adj <- function(edgelist, selfedges = TRUE, as.array = TRUE, directed = TRUE) {
   Time = length(edgelist)
   E = do.call("rbind", edgelist)
   S = unique(c(as.character(E[,1]), as.character(E[,2])))
   N = length(S)
   Nodes = 1:N; names(Nodes) = S
   adjlist = lapply(1:Time, function(t) {
-    
     #add count if not present
     if (ncol(edgelist[[t]]) == 2) {edgelist[[t]][,3] = 1}
     names(edgelist[[t]]) = c("from", "to", "count")
@@ -33,30 +31,41 @@ edgelist_to_adj <- function(edgelist, selfedges = FALSE, as.array = TRUE, direct
                         Nodes[as.character(edgelist[[t]][,2])] ) ] = edgelist[[t]][,3]
     # remove self-edges?
     if (selfedges == FALSE) {diag(adjlist.t) = 0}
-    return(adjlist.t)
+    if (directed == FALSE) {
+      adjlist.t = adjlist.t+t(adjlist.t)
+      diag(adjlist.t) = diag(adjlist.t)/2
+    }
     
+    return(adjlist.t)
   })
   
   if (as.array == TRUE) {
-    A = array(unlist(adjlist), dim = c(N,N,Time), dimnames = list(S, S, 1:Time))
-    return(A)
-  } else {return(adjlist)}  
+    adjlist = array(unlist(adjlist), dim = c(N,N,Time), dimnames = list(S, S, 1:Time))
+  }
+  
+ return(adjlist)
+  
 }
 
 #' Calculate the un-normalized log-likelihood for a single timeslice given mu as input (works for discrete or continuous). Helper for tdd_sbm_llik and tdmm_sbm_llik
 #' #
 #' @param A_t is a single-time network, represented as a N x N adjacency matrix
 #' @param mu mu is a N x N matrix of edge expected values at this time slice
-#' @param K is the number of blocks
+#' @param directed Are the edges in the edgelist directed?
+#' @param selfEdges is whether to sum over self-edge indices in the likelihood calculation, or exclude them
 #' 
-td_sbm_llik_t <- function(A_t, mu, K = 2) {
-  diag(mu) = 1
+td_sbm_llik_t <- function(A_t, mu, directed = TRUE, selfEdges = TRUE) {
+  if (!selfEdges) {
+    diag(mu) = 1
+  }
   term0 = A_t * log(mu)
   #print(A_t[!is.finite(term0)]) #<- should be empty (only return numeric(0))
-  term0[!is.finite(term0)] = 0 # note we're letter 0*log(0) = 0
-  term1 = sum(term0)
-  diag(mu) = 0
-  term2 = sum(mu)
+  term0[!is.finite(term0)] = 0 # note we let 0*log(0) = 0
+  term1 = ifelse(directed, sum(term0), sum(term0[upper.tri(term0, diag = TRUE)]))
+  if (!selfEdges) {
+    diag(mu) = 0
+  }
+  term2 = ifelse(directed, sum(mu), sum(mu[upper.tri(mu, diag = TRUE)]))
   #term3 = sum(log(factorial(A_t)))
   return(term1 - term2)
 }
@@ -66,8 +75,9 @@ td_sbm_llik_t <- function(A_t, mu, K = 2) {
 #' @param N number of nodes
 #' @param K number of blocks
 #' @param Time number of time slices
-tdd_n_param <- function(N, K, Time) {
-  2*N - K + Time*K^2
+#' @param directed Is the network directed?
+tdd_n_param <- function(N, K, Time, directed = TRUE) {
+  ifelse(directed, 2*N - K + Time*K^2, 2*N - K + Time*(K*(K-1)/2))
 }
 
 #' Calculate number of parameters for mixed model
@@ -75,8 +85,9 @@ tdd_n_param <- function(N, K, Time) {
 #' @param N number of nodes
 #' @param K number of blocks
 #' @param Time number of time slices
-tdmm_n_param <- function(N, K, Time) {
-  K*N - K + Time*K^2
+#' @param directed Is the network directed?
+tdmm_n_param <- function(N, K, Time, directed = TRUE) {
+  ifelse(directed, K*N - K + Time*K^2, K*N - K + Time*(K*(K-1)/2))
 }
 
 # ---------------------------------- Functions (discrete membership TDD-SBM) -----------------------------------------
@@ -86,12 +97,15 @@ tdmm_n_param <- function(N, K, Time) {
 #' @param A (time) series of network data represented  as N x N x Time array.
 #' @param roles is a length-N list of estimated block assignment for each node
 #' @param omega is a Time x K x K array describing block-to-block traffic at each time period or Time-length list of K x K matrices.
+#' @param directed Is the network directed?
+#' @param selfEdges is whether to sum over self-edge indices in the likelihood calculation, or exclude them
+#' @examples
 #' data("la_byhour_edgelist")
 #' A = edgelist_to_adj(la_byhour_edgelist, as.array = TRUE)
-#' model1 = sbmt(la_byhour_edgelist,  degreeCorrect = 3, directed = T, klPerNetwork = 2, maxComms = 3)
+#' model1 = sbmt(la_byhour_edgelist,  degreeCorrect = 3, directed = TRUE, klPerNetwork = 2, maxComms = 3)
 #' tdd_sbm_llik(A, model1$FoundComms, model1$EdgeMatrix)
 #' 
-tdd_sbm_llik <- function(A, roles, omega) {
+tdd_sbm_llik <- function(A, roles, omega, directed = TRUE, selfEdges = TRUE) {
   
   N = dim(A)[1]
   Time = dim(A)[3]
@@ -111,7 +125,7 @@ tdd_sbm_llik <- function(A, roles, omega) {
   lik = sum(
           sapply(1:Time, function(t) {
             mu_t = diag(theta) %*% matrix( (omega[,,t])[as.matrix(expand.grid(role_degree$role, role_degree$role))], N, N) %*% diag(theta)
-            td_sbm_llik_t(A[,,t], mu_t, K)
+            td_sbm_llik_t(A[,,t], mu_t, directed, selfEdges)
           })
         ) 
   return(lik)
@@ -124,6 +138,8 @@ tdd_sbm_llik <- function(A, roles, omega) {
 #' @param A is a A (time) series of network data represented  as N x N x Time array.
 #' @param C is a N x K matrix of mixed group membership whose columns sum to 1
 #' @param omega is a Time x K x K array describing block-to-block traffic at each time period or Time-length list of K x K matrices.
+#' @param directed Is the network directed?
+#' @param selfEdges is whether to sum over self-edge indices in the likelihood calculation, or exclude them
 #' @examples
 #' # Uses output from python implementation (slighly reformatted)
 #' data("la_byhour_edgelist", "la_mixed_roles_2", "la_mixed_omega_2")
@@ -131,7 +147,7 @@ tdd_sbm_llik <- function(A, roles, omega) {
 #' tdmm_sbm_llik(A, la_mixed_roles_2, la_mixed_omega_2)
 #' 
 
-tdmm_sbm_llik <- function(A, C, omega) {
+tdmm_sbm_llik <- function(A, C, omega, directed = TRUE, selfEdges = TRUE) {
   
   N = dim(A)[1]
   Time = dim(A)[3]
@@ -143,7 +159,7 @@ tdmm_sbm_llik <- function(A, C, omega) {
   lik = sum(
     sapply(1:Time, function(t) {
       mu_t = C %*% omega[,,t] %*% t(C)
-      td_sbm_llik_t(A[,,t], mu_t, K = K)
+      td_sbm_llik_t(A[,,t], mu_t, directed, selfEdges)
     })
   ) 
   return(lik)
