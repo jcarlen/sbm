@@ -1,6 +1,7 @@
 // TO DO: 1) Add twice diag option for undirected? Move to R side?
 //        2) Fix the code for reading in given initial communities (on the R and cpp ends)
 //        3) Allow network input and function converts to edgelist
+//        4) Is self-twice necessary for undirected case or already account for? Can we just get rid of it?
 // CHANGES: 1) Edge matrices are vectors (get same behavior using row and column indexing) so they can be declared and then size changed.
 //          2) Use Rcpp for random community generation, no rng dependence
 //          3) Doubles instead of floats - need precision for LogFunction
@@ -22,7 +23,7 @@ using namespace Rcpp;
 //*********************** GLOBAL VARIABLES *******************************************************************
 
 // Not modified
-const int SelfTwice = 1; ///Make 2 if you want to count self-edges twice (convention) in the directed case
+const int SelfTwice = 1; ///Make 2 if you want to count self-edges twice
 
 // Network-Dependent
 std::vector<double> Degree;  // Degree of nodes in the network or in Degree if directed
@@ -907,8 +908,13 @@ double ComputeProposal(int vertex, int from, int destination)
         
          if (Directed)
          {
+             /// Note that for both degree-corrected and non-degree corrected block models the simplified objective function is of the form
+             /// \sum_rs m_rs * log(mrs/value depending on degree correction), = \sum_rs m_rs * log(mrs) -  m_rs * log(value depending on degree cor)
+             /// which means that we have code for the first part of the sum regardless of degree-correction strategy
              
-             //Rcout << "CP_Directed" << std::endl;
+             /// "from" and "dest" refer to the pre-move and post-move states of a node
+             /// some of my notation is to keep track in the scenario that a node moves from "white" to "black"
+             
              // if the total degree of the vertex is zero we know nothing about it
              // in this case we don't ever change its community
              // at the end we put all degree zeroes into their own group
@@ -916,8 +922,8 @@ double ComputeProposal(int vertex, int from, int destination)
              
              if( (DegreeCorrect == 2 | DegreeCorrect == 3) && (degreeTotal <= tol && outDegreeTotal <= tol)) continue;
              
-             // 1) Communities going into the vertex
-             // we first add up all the cross-terms (between communities that are not from / destination)
+             // 1) Communities going into the vertex community
+             // we first add up all the cross-terms (between communities that are not from | destination)
              for(i=0; i < MaxComms; i++)
              {
                  // we lost NeighborSet[i] to NeighborIndex[i] from the from comm
@@ -925,35 +931,35 @@ double ComputeProposal(int vertex, int from, int destination)
                  // IFF the comms were not from and destination
                  if((i != from) && (i != destination))
                  {
-                     help1 = CurrentEdgeMatrix[i * MaxComms + from + t*MaxComms*MaxComms];
-                     help2 = CurrentEdgeMatrix[i * MaxComms + destination + t*MaxComms*MaxComms];
-                     help3 = NeighborSet[i + t*MaxComms];
+                     help1 = CurrentEdgeMatrix[i * MaxComms + from + t*MaxComms*MaxComms]; /// m_qw
+                     help2 = CurrentEdgeMatrix[i * MaxComms + destination + t*MaxComms*MaxComms];/// m_qb
+                     help3 = NeighborSet[i + t*MaxComms]; 
              
                      ratiovalue += LogFunction(help1-help3) - LogFunction(help1);
                      ratiovalue += LogFunction(help2+help3) - LogFunction(help2);
                  }
              
                  if(i == from)
-                     fromcount = NeighborSet[i + t*MaxComms];
+                     fromcount = NeighborSet[i + t*MaxComms]; // amount node receives from its former community -- 
                      //Rcout << "fromcount_" << fromcount << std::endl;
              
                  if(i == destination)
-                     destcount = NeighborSet[i + t*MaxComms];
+                     destcount = NeighborSet[i + t*MaxComms]; // amount nodes receives from its new community -- 
                      //Rcout << "destcount_" << destcount << std::endl;
              }
          
+             // 2) Communities going out of the vertex community
              for(i=0; i < MaxComms; i++)
              {
-                 // we lost NeighborSet[i] to NeighborIndex[i] from the from comm
+                 // we lost outNeighborSet[i] to outNeighborIndex[i] from the from comm
                  // we gain the same amount in the destination comm
                  // IFF the comms were not from and destination
                  if((i != from) && (i != destination))
                  {
                      // do update NOTE: each community mcc' gets updated once if it had edges switch out
-                     // which is correct, remembering that mcc' is symmetric (///undirected case) and we only count c < c' here
              
-                     help1 = CurrentEdgeMatrix[from * MaxComms + i + t*MaxComms*MaxComms];
-                     help2 = CurrentEdgeMatrix[destination * MaxComms + i + t*MaxComms*MaxComms];
+                     help1 = CurrentEdgeMatrix[from * MaxComms + i + t*MaxComms*MaxComms]; /// m_wq
+                     help2 = CurrentEdgeMatrix[destination * MaxComms + i + t*MaxComms*MaxComms]; ///m_bq
                      help3 = outNeighborSet[i + t*MaxComms];
              
                      ratiovalue += LogFunction(help1-help3) - LogFunction(help1);
@@ -967,17 +973,25 @@ double ComputeProposal(int vertex, int from, int destination)
                      outdestcount = outNeighborSet[i + t*MaxComms];
              }
         
-             // now we add in the term corresponding to from / dest
-             help1 = double(CurrentEdgeMatrix[from * MaxComms + destination + t*MaxComms*MaxComms]); /// total white to black
-             help2 = double(fromcount-outdestcount); /// white to white - white to black
-             help3 = double(CurrentEdgeMatrix[destination * MaxComms + from + t*MaxComms*MaxComms]); /// total black to white
-             help4 = double(outfromcount-destcount); /// white to white - black to white
+             // 3) now we add in the terms corresponding to from | dest
+             help1 = double(CurrentEdgeMatrix[from * MaxComms + destination + t*MaxComms*MaxComms]); /// white to black
+             help2 = double(fromcount - outdestcount); /// change in white to black
+             help3 = double(CurrentEdgeMatrix[destination * MaxComms + from + t*MaxComms*MaxComms]); /// black to white
+             help4 = double(outfromcount - destcount); /// change in black to white
             
-             if (help1 + help2 < 0) Rcout << "help1 + help2  (4)" << help1 + help2 << std::endl;
+             // in case of errors -- print some info
+             if (help1 + help2 < 0) {
+                    Rcout << "help1 (3) " << help1 << std::endl;
+                    Rcout << "help2 (3) " << help2 << std::endl;
+                    Rcout << "help1 + help2  (3)" << help1 + help2 << std::endl;
+                    Rcout << "fromcount" << fromcount << std::endl;
+                    Rcout << "outdestcount" <<outdestcount << std::endl;
+                    Rcout << "SelfEdgeCounter, t = " << t << "node = " << vertex << "SEC = " << SelfEdgeCounter[t*Nodes + vertex] << std::endl;
+             }
              if (help3 + help4 < 0) {
-                    Rcout << "help3 + help4  (4)" << help3 + help4 << std::endl;
-                    Rcout << "help3 (4)" << help3 << std::endl;
-                    Rcout << "help4 (4)" << help4 << std::endl;
+                    Rcout << "help3 + help4  (3) " << help3 + help4 << std::endl;
+                    Rcout << "help3 (3) " << help3 << std::endl;
+                    Rcout << "help4 (3) " << help4 << std::endl;
                     Rcout << "vertex " << vertex << std::endl;
                     Rcout << "outfromcount " << vertex << std::endl;
                     Rcout << "destcount " << vertex << std::endl;
@@ -989,24 +1003,24 @@ double ComputeProposal(int vertex, int from, int destination)
                     Rcout << NeighborSet[1 + t*MaxComms] << " ";
                     Rcout << NeighborSet[2 + t*MaxComms] << " " << std::endl;
              }
-             
              if (help1 < 0) Rcout << "help1 (4)" << help1 << std::endl;
              
-             ratiovalue += LogFunction(help1 + help2) - LogFunction(help1); /// w 2 b - self-edges already excluded
+             ratiovalue += LogFunction(help1 + help2) - LogFunction(help1); /// w 2 b - self-edges already excluded from NeighborSets, so also from fromcounts and destcounts
              ratiovalue += LogFunction(help3 + help4) - LogFunction(help3); /// b 2 w
              
-             // now we do from/from
+             // 4) now we do from/from
              help1 = double(CurrentEdgeMatrix[from * MaxComms + from + t*MaxComms*MaxComms]);
              help2 = double(SelfEdgeCounter[t*Nodes + vertex] + fromcount + outfromcount);
              
-             //Rcout << "SelfEdgeCounter, t = " << t << ", SEC = " << SelfEdgeCounter[t] << std::endl;
+             /// Rcout << "SelfEdgeCounter, t = " << t << ", SEC = " << SelfEdgeCounter[t] << std::endl;
+
              if (help1 - help2 < 0) Rcout << "help1 - help2 (2)  " << help1 - help2 << std::endl;
              if (help1 < 0) Rcout << "help1 (2) " << help1 << std::endl;
              
              ratiovalue += LogFunction(help1 - help2) - LogFunction(help1);
              
              
-             // and now dest/dest
+             // 5) and now dest/dest
              help1 = double(CurrentEdgeMatrix[destination * MaxComms + destination + t*MaxComms*MaxComms]);
              help2 = double(SelfEdgeCounter[t*Nodes + vertex] + destcount + outdestcount);
              
@@ -1119,22 +1133,24 @@ double ComputeProposal(int vertex, int from, int destination)
              if(DegreeCorrect == 3)
              {
                  // now we add in the terms corresponding to from
-                 ///in
                  help1 = double(CurrentCommStubsTotal[from]+CurrentCommEndsTotal[from]);
                  help2 = double(Degree[vertex + t*Nodes] + outDegree[vertex + t*Nodes]);
                  help3 = double(CurrentCommEnds[from + t*MaxComms] + CurrentCommStubs[from + t*MaxComms]);
                  
                  if (help1 > tol && help1 - help2 > tol)
+                 {
                      ratiovalue += -(help3 - help2)*log(help1 - degreeTotal - outDegreeTotal) + help3*log(help1);
+                 }
                  
                  // now we add in the terms corresponding to dest
-                 ///in
                  help1 = double(CurrentCommEndsTotal[destination] + CurrentCommStubsTotal[destination]);
                  help2 = double(Degree[vertex + t*Nodes] + outDegree[vertex + t*Nodes]);
                  help3 = double(CurrentCommEnds[destination + t*MaxComms] + CurrentCommStubs[destination + t*MaxComms]);
                  
                  if (help1 > tol && help1 + help2 > tol)
+                 {
                      ratiovalue += -(help3 + help2)*log(help1 + degreeTotal + outDegreeTotal) + help3*log(help1);
+                 }
              }
 
         }
