@@ -94,9 +94,6 @@ sbmt <- function(edgelist.time, maxComms = 2, degreeCorrect = 0, directed = F, k
 
     #Reformat best matrices
     Time = length(edgelist.time)
-    Results$EdgeMatrix= sapply(1:Time, function(x) {
-        matrix(Results$EdgeMatrix[ (maxComms^2 * (x-1) + 1) : (maxComms^2 * x) ], nrow = maxComms, ncol = maxComms, byrow = T)
-    }, simplify = F,  USE.NAMES = F)
     
     # have levels numbered in order of appearance so that lable switching doesn't affect output
     Results$FoundComms = as.factor(Results$FoundComms)
@@ -106,6 +103,9 @@ sbmt <- function(edgelist.time, maxComms = 2, degreeCorrect = 0, directed = F, k
     # Return found community membership in order of ID
     names(Results$FoundComms) = names(link.nodes)
     
+    Results$EdgeMatrix= sapply(1:Time, function(x) {
+      matrix(Results$EdgeMatrix[ (maxComms^2 * (x-1) + 1) : (maxComms^2 * x) ], nrow = maxComms, ncol = maxComms, byrow = T)
+    }, simplify = F,  USE.NAMES = F)
     Results$EdgeMatrix = lapply(Results$EdgeMatrix, function(x) {x[order(tmp.levels), order(tmp.levels)]})
     
     Results$directed = directed
