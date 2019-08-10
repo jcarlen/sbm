@@ -602,7 +602,8 @@ double ComputeInitialScore()
                 {
                     if (BestEdgeMatrix[i*MaxComms+j + t*MaxComms*MaxComms] < 0 )
                         Rcout << "BestEdgeMatrix[i*MaxComms+j + t*MaxComms*MaxComms] " << BestEdgeMatrix[i*MaxComms+j + t*MaxComms*MaxComms] << std::endl;
-                    sum = sum + LogFunction(BestEdgeMatrix[i*MaxComms+j + t*MaxComms*MaxComms]);
+                    
+                    sum = sum + LogFunction(BestEdgeMatrix[i*MaxComms+j + t*MaxComms*MaxComms]); //m_rst*log(m_rst)
                     
                     double bestval;
                     
@@ -619,19 +620,19 @@ double ComputeInitialScore()
                     }
                    
                     if (DegreeCorrect == 3) {
-                        bestval = (BestCommStubsTotal[i]+BestCommEndsTotal[i]) * (BestCommStubsTotal[j]+BestCommEndsTotal[j]);
+                        bestval = (BestCommStubsTotal[i]+BestCommEndsTotal[i]) * (BestCommStubsTotal[j]+BestCommEndsTotal[j]); //K_r*K_s
                     }
                     
-                    if ( bestval > tol && BestEdgeMatrix[i*MaxComms+j + t*MaxComms*MaxComms] > tol)
-                        sum = sum - BestEdgeMatrix[i*MaxComms+j + t*MaxComms*MaxComms] * log(bestval);
+                    if ( bestval > tol && BestEdgeMatrix[i*MaxComms+j + t*MaxComms*MaxComms] > tol) {
+                        sum = sum - BestEdgeMatrix[i*MaxComms+j + t*MaxComms*MaxComms] * log(bestval); //- m_rst * log(K_r*K_s)
+                    }
                 }
                 
             }
-            
         }
     }
     
-    //Rcout << "sum " << sum << std::endl;
+    /// Rcout << "ComputedInitialScore" << sum << std::endl;
     return sum;
     
     
