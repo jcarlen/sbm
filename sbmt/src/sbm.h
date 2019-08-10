@@ -46,11 +46,11 @@ extern long double Tolerance; // stopping criteria for KL // this prevents loops
 
 //------------------------------------------------------------------------------------------------------------------------------------------------
 
-void Initialize(IntegerMatrix AdjList, NumericMatrix AdjListWeight); // initializes the data structures for KL
+void Initialize(IntegerMatrix AdjList, NumericMatrix AdjListWeight, IntegerVector seedComms); // initializes the data structures for KL
 
 double ComputeInitialScore(); // computes the initial score after initialization
 
-void RunKL(IntegerMatrix AdjList, NumericMatrix AdjListWeight, IntegerMatrix outAdjList, NumericMatrix outAdjListWeight); // runs Kernighan-Lin once.
+void RunKL(IntegerMatrix AdjList, NumericMatrix AdjListWeight, IntegerMatrix outAdjList, NumericMatrix outAdjListWeight, IntegerVector SeedComms); // runs Kernighan-Lin once.
 
 void ComputeNeighborSet(int vertex, int option, IntegerMatrix AdjList, NumericMatrix AdjListWeight, IntegerMatrix outAdjList, NumericMatrix outAdjListWedght, int time);  // computes the neighbor set for a vertex, using either best or currentstates
 

@@ -2,7 +2,8 @@
 % Please edit documentation in R/td_sbm_llik.R
 \name{tdd_sbm_llik}
 \alias{tdd_sbm_llik}
-\title{Calculate un-normalized log-likelihood for a TDD-SBM (time-dependent discrete-membership stochastic block model)}
+\title{Calculate un-normalized log-likelihood for a TDD-SBM (time-dependent discrete-membership stochastic block model).
+This is not the same as the "highest score" returned by sbmt, which is unnormalized in a different way}
 \usage{
 tdd_sbm_llik(A, roles, omega, directed = TRUE, selfEdges = TRUE)
 }
@@ -18,7 +19,8 @@ tdd_sbm_llik(A, roles, omega, directed = TRUE, selfEdges = TRUE)
 \item{selfEdges}{is whether to sum over self-edge indices in the likelihood calculation, or exclude them}
 }
 \description{
-Calculate un-normalized log-likelihood for a TDD-SBM (time-dependent discrete-membership stochastic block model)
+Calculate un-normalized log-likelihood for a TDD-SBM (time-dependent discrete-membership stochastic block model).
+This is not the same as the "highest score" returned by sbmt, which is unnormalized in a different way
 }
 \examples{
 data("la_byhour_edgelist")

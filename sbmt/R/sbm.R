@@ -1,26 +1,40 @@
 ## sbm.R: Running extended Karrar SBM code via R
-##
-## License? (You should have received a copy of the GNU General Public License
-## along with RcppExamples.  If not, see <http://www.gnu.org/licenses/>.)
-
-## To do: Check that seed can be set for reproducibility
-## Make seedComms usable for non-random initialization
-
+#
 #' Estimate parameters of a static SBM by Kernighan-Lin algorithm. Allows for directed networks and degree correction.
 #
-# '@maxComms maximum number of communities represented in the network
-# '@degreeCorrect whether to apply the degree correction of Karrer and Newman
-# '@directed whether the network is directed and off-diagonal block parameters may be assymetrical
-# '@KLPerNetwork this is the number of KL runs on a network
-# '@tolerance stopping criteria for KL. Prevents loops due to numerical errors.
-
-sbm <- function(edgelist, maxComms = 2, degreeCorrect = F, directed = FALSE, klPerNetwork = 50, tolerance = 1e-4, seedComms = NULL, seed = NULL)
+#' @param edgelist Network to model in edgelist format
+#' @param maxComms maximum number of communities represented in the network
+#' @param degreeCorrect whether to apply degree correction.:
+#' #' \itemize{
+#'   \item 0 = no degree correction
+#'   \item 1 = the degree correction of Karrer and Newman - inherits directedness of graph
+#' }
+#' @param directed whether the network is directed and off-diagonal block parameters may be assymetrical
+#' @param klPerNetwork this is the number of KL runs on a network
+#' @param tolerance stopping criteria for KL. Prevents loops due to numerical errors.
+#' @param seed a random seet set for reproducibility.
+#' @param seedComms user-supplied starting values for KL runs. They will be converted to integer levels numbered starting at 0
+#
+#'@return FoundComms A vector of node labels with estimated block assignments.
+#'@return EdgeMatrix block to block edges corresponding to FoundComms
+#'@return HighestScore Highest score found by algorithm runs
+#'@return llik unnormalized log-likelihood of result as calculated by tdd_sbm_llik
+#'@return directed Whether input network was considered directed
+#'@return degreeCorrect type of degreeCorrection used in fitting
+#'@return klPerNetwork number of runs of KL algorithm used in fitting
+#'@return tolerance tolerance value used for fitting
+#'@return init seed = set for fitting, if supplied;  seedComms = initial communities as fed to sbmtFit (conversion to zero-min integer vector may have occurred)
+#'
+#' 
+sbm <- function(edgelist, maxComms = 2, degreeCorrect = F, directed = FALSE,
+                klPerNetwork = 50, tolerance = 1e-4, seed = NULL, seedComms = NULL)
 
 {
     # Argument Checks
     if (is.null(dim(edgelist)) || ncol(edgelist) < 2) {
         stop("edgelist must have at least two columns, three if weights are supplied")
     }
+    A = edgelist_to_adj(list(edgelist), directed = directed) # store array from original
     if (is.list(edgelist)) {edgelist = as.matrix(edgelist)} #convert from data frame to matrix if necessary
     
     # Remove potential attributes
@@ -56,19 +70,46 @@ sbm <- function(edgelist, maxComms = 2, degreeCorrect = F, directed = FALSE, klP
         # relic of Karrer and Newman code to have degreeCorrect be 0|1
     }
     
+    # set seed
+    if (!is.null(seed)) set.seed(seed)
+    
+    # check seedComms if given, reformat if necessary
+    if (!is.null(seedComms)) {
+      if (length(seedComms) != N | length(unique(seedComms)) > maxComms) {
+        stop("seedComms should have length == #nodes and unique values shouldn't exceed maxComms")
+      }
+      
+      # if not integer format, convert to cpp appropriate (0,1,2,...) style
+      if (!is.integer(seedComms)) {
+        seedComms = as.numeric(as.factor(seedComms))-1
+      } else {
+        # convert to cpp range (0,1,...)
+        if (min(seedComms) != 0) {
+          seedComms = seedComms - min(seedComms)
+        }
+      } 
+      # check cpp range (0,1,2,...)
+      if (max(seedComms) > (maxComms - 1))  stop("seedComm range exceeds maxComms")
+    } else 
+    {
+      seedComms = 0
+    }
+    
     ## Make the call...
-    Results <- sbmFit(edgelist1-1, maxComms, degreeCorrect, directed, klPerNetwork, weights, tolerance)
+    Results <- sbmFit(edgelist1-1, maxComms, degreeCorrect, directed, klPerNetwork, weights, tolerance, seedComms)
     
     cat("\nResults!\n")
     
     names(Results$FoundComms) = names(link.nodes) # Return found community membership in order of ID
     Results$EdgeMatrix = matrix(Results$EdgeMatrix, maxComms, maxComms, byrow = T)
+    Results$llik = tdd_sbm_llik(A, Results$FoundComms, Results$EdgeMatrix, directed = directed)
     Results$degreeCorrect = degreeCorrect
     Results$directed = directed
     Results$klPerNetwork = klPerNetwork
-    Results$weighted = weighted
     Results$tolerance = tolerance
+    Results$init = list(seed = seed, seedComms = seedComms)
     
     Results
 }
+
 

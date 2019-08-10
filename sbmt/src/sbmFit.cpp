@@ -64,8 +64,8 @@ long double Tolerance; // stopping criteria for KL // this prevents loops due to
 
 //*********************** FUNCTION DECLARATIONS **********************************************************
 
-void Initialize(IntegerMatrix AdjList, NumericMatrix AdjListWeight); // initializes the data structures for KL
-void RunKL(IntegerMatrix AdjList, NumericMatrix AdjListWeight, IntegerMatrix outAdjList, NumericMatrix outAdjListWeight); // runs Kernighan-Lin once.
+void Initialize(IntegerMatrix AdjList, NumericMatrix AdjListWeight, IntegerVector SeedComms); // initializes the data structures for KL
+void RunKL(IntegerMatrix AdjList, NumericMatrix AdjListWeight, IntegerMatrix outAdjList, NumericMatrix outAdjListWeight, IntegerVector SeedComms); // runs Kernighan-Lin once.
 void ComputeNeighborSet(int vertex, int option, IntegerMatrix AdjList, NumericMatrix AdjListWeight, IntegerMatrix outAdjList, NumericMatrix outAdjListWedght, int time);  // computes the neighbor set for a vertex, using either best or currentstates
 double ComputeProposal(int vertex, int from, int destination); // computes the value of the particular change
 void UpdateMatrices(int vertex, int option, int from, int destination); // this updates either the best
@@ -77,7 +77,8 @@ IntegerVector randomComms(int Nodes, int MaxComms); // generates random commmuni
 
 // [[Rcpp::export]]
 
-List sbmFit(const IntegerMatrix & edgelist, const int maxComms, const int degreeCorrect, const bool directed, const int klPerNetwork, const NumericVector weights, const long double tolerance) {  //, const IntegerVector seedComms)
+List sbmFit(const IntegerMatrix & edgelist, const int maxComms, const int degreeCorrect, const bool directed,
+            const int klPerNetwork, const NumericVector weights, const long double tolerance, const IntegerVector seedComms) {  //, const IntegerVector seedComms)
 
     int i, j, k;
     
@@ -98,6 +99,7 @@ List sbmFit(const IntegerMatrix & edgelist, const int maxComms, const int degree
     Directed = directed;
     KLPerNetwork = klPerNetwork;
     Tolerance = tolerance;
+    IntegerVector SeedComms = seedComms;
     T = 1; //time steps, if applicable
     
     /// Make space in Global Vars
@@ -226,7 +228,7 @@ List sbmFit(const IntegerMatrix & edgelist, const int maxComms, const int degree
     for(j=0; j < KLPerNetwork; j++)
 {
         
-        RunKL(AdjList, AdjListWeight, outAdjList, outAdjListWeight);
+        RunKL(AdjList, AdjListWeight, outAdjList, outAdjListWeight, SeedComms);
         
         if(MaxScore >= HighestScore)
         {
@@ -273,7 +275,7 @@ List sbmFit(const IntegerMatrix & edgelist, const int maxComms, const int degree
  }
 
 
-void RunKL(IntegerMatrix AdjList, NumericMatrix AdjListWeight, IntegerMatrix outAdjList, NumericMatrix outAdjListWeight)
+void RunKL(IntegerMatrix AdjList, NumericMatrix AdjListWeight, IntegerMatrix outAdjList, NumericMatrix outAdjListWeight, IntegerVector SeedComms)
 {
     int i,j,k;
     int MaxIndex;
@@ -291,7 +293,7 @@ void RunKL(IntegerMatrix AdjList, NumericMatrix AdjListWeight, IntegerMatrix out
     double value;
     int Priority;
     
-    Initialize(AdjList, AdjListWeight);
+    Initialize(AdjList, AdjListWeight, SeedComms);
     
     // This returns the log of the initial score
     MaxScore = ComputeInitialScore();
@@ -439,12 +441,15 @@ void RunKL(IntegerMatrix AdjList, NumericMatrix AdjListWeight, IntegerMatrix out
 }
 
 
-void Initialize(IntegerMatrix AdjList, NumericMatrix AdjListWeight) // Calculate Vertices, Stubs, Ends, Matrix based on Comm initiation (currently random initiation only)
+void Initialize(IntegerMatrix AdjList, NumericMatrix AdjListWeight, IntegerVector SeedComms) // Calculate Vertices, Stubs, Ends, Matrix based on Comm initiation (currently random initiation only)
 {
     int i, j;
     int neighbor;
     // double sum;
-    IntegerVector randComms = randomComms(Nodes, MaxComms);
+    
+    if (SeedComms.length() == 1) { // <- If no seedComms given, 0 is default value, has length 1
+      SeedComms = randomComms(Nodes, MaxComms);
+    }
     
     if ( !Directed )
     {
@@ -459,7 +464,7 @@ void Initialize(IntegerMatrix AdjList, NumericMatrix AdjListWeight) // Calculate
        
         for(i=0; i < Nodes; i++)
         {
-            BestState[i] = randComms[i];
+            BestState[i] = SeedComms[i];
             /*if(InitializationOption == 1)
                 BestState[i] = TrueState[i];*/
             BestCommVertices[BestState[i]]++;
@@ -502,7 +507,7 @@ void Initialize(IntegerMatrix AdjList, NumericMatrix AdjListWeight) // Calculate
         for(i=0; i < Nodes; i++)
         {
         
-            BestState[i] = randComms(i);
+            BestState[i] = SeedComms(i);
             /*if(InitializationOption == 1)
                 BestState[i] = TrueState[i];*/
             BestCommVertices[BestState[i]]++; ///track number of vertices in each class
@@ -632,7 +637,7 @@ double ComputeInitialScore()
         }
     }
     
-    /// Rcout << "ComputedInitialScore" << sum << std::endl;
+    ///Rcout << "ComputedInitialScore" << sum << std::endl;
     return sum;
     
     

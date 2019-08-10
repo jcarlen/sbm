@@ -5,19 +5,19 @@
 \title{Estimate parameters of the TDD-SBM (time-dependent discrete stochastic block model) by Kernighan-Lin algorithm.}
 \usage{
 sbmt(edgelist.time, maxComms = 2, degreeCorrect = 0, directed = F,
-  klPerNetwork = 50, tolerance = 1e-04, seedComms = NULL,
-  seed = NULL)
+  klPerNetwork = 50, tolerance = 1e-04, seed = NULL,
+  seedComms = NULL)
 }
 \arguments{
 \item{edgelist.time}{Time-sliced network to model, formatted as a list of networks in edgelist format}
 
 \item{maxComms}{maximum number of communities represented in the network}
 
-\item{degreeCorrect}{whether to apply degree correction.:
+\item{degreeCorrect}{whether to apply degree correction:
 \itemize{
   \item 0 = no degree correction
-  \item 1 = the degree correction of Karrer and Newman at every time step
-  \item 2 = time-independent degree correction over time-dependent data - inherets directedness of graph
+  \item 1 = the degree correction of Karrer and Newman at every time step - inherits directedness of graph
+  \item 2 = time-independent degree correction over time-dependent data - inherits directedness of graph
   \item 3 = time-independent degree correction over time-dependent data - undirected regardless
 }}
 
@@ -27,14 +27,28 @@ sbmt(edgelist.time, maxComms = 2, degreeCorrect = 0, directed = F,
 
 \item{tolerance}{stopping criteria for KL. Prevents loops due to numerical errors.}
 
-\item{seedComms}{user-supplied starting values for KL runs. NOT YET IMPLEMENTED.}
+\item{seed}{a random seet set for reproducibility.}
 
-\item{seed}{a random seet set for reproducibility. (Implemented?)}
+\item{seedComms}{user-supplied starting values for KL runs. They will be converted to integer levels numbered starting at 0}
 }
 \value{
-FoundComms is a vector of node labels with estimated block assignments.
+FoundComms A vector of node labels with estimated block assignments.
 
-EdgeMatrix is
+EdgeMatrix time-specific block to block edges corresponding to FoundComms
+
+HighestScore Highest score found by algorithm runs
+
+llik unnormalized log-likelihood of result as calculated by tdd_sbm_llik
+
+directed Whether input network was considered directed
+
+degreeCorrect type of degreeCorrection used in fitting
+
+klPerNetwork number of runs of KL algorithm used in fitting
+
+tolerance tolerance value used for fitting
+
+init seed = set for fitting, if supplied;  seedComms = initial communities as fed to sbmtFit (conversion to zero-min integer vector may have occurred)
 }
 \description{
 Estimate parameters of the TDD-SBM (time-dependent discrete stochastic block model) by Kernighan-Lin algorithm.

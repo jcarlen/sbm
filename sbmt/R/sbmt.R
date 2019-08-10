@@ -16,35 +16,44 @@
 #' @param edgelist.time Time-sliced network to model, formatted as a list of networks in edgelist format
 #' @param klPerNetwork this is the number of KL runs on a network
 #' @param maxComms maximum number of communities represented in the network
-#' @param seedComms user-supplied starting values for KL runs. NOT YET IMPLEMENTED.
-#' @param directed whether the network is directed and off-diagonal block parameters may be assymetrical
-#' @param degreeCorrect whether to apply degree correction.:
+#' @param degreeCorrect whether to apply degree correction:
 #' \itemize{
 #'   \item 0 = no degree correction
-#'   \item 1 = the degree correction of Karrer and Newman at every time step
-#'   \item 2 = time-independent degree correction over time-dependent data - inherets directedness of graph
+#'   \item 1 = the degree correction of Karrer and Newman at every time step - inherits directedness of graph
+#'   \item 2 = time-independent degree correction over time-dependent data - inherits directedness of graph
 #'   \item 3 = time-independent degree correction over time-dependent data - undirected regardless
 #'}
+#' @param directed whether the network is directed and off-diagonal block parameters may be assymetrical
 #'@param tolerance stopping criteria for KL. Prevents loops due to numerical errors.
-#'@param seed a random seet set for reproducibility. (Implemented?)
+#'@param seed a random seet set for reproducibility.
+#'@param seedComms user-supplied starting values for KL runs. They will be converted to integer levels numbered starting at 0
 #
-#'@return FoundComms is a vector of node labels with estimated block assignments.
-#'@return EdgeMatrix is 
-sbmt <- function(edgelist.time, maxComms = 2, degreeCorrect = 0, directed = F, klPerNetwork = 50, tolerance = 1e-4, seedComms = NULL, seed = NULL) {
+#'@return FoundComms A vector of node labels with estimated block assignments.
+#'@return EdgeMatrix time-specific block to block edges corresponding to FoundComms
+#'@return HighestScore Highest score found by algorithm runs
+#'@return llik unnormalized log-likelihood of result as calculated by tdd_sbm_llik
+#'@return directed Whether input network was considered directed
+#'@return degreeCorrect type of degreeCorrection used in fitting
+#'@return klPerNetwork number of runs of KL algorithm used in fitting
+#'@return tolerance tolerance value used for fitting
+#'@return init seed = set for fitting, if supplied;  seedComms = initial communities as fed to sbmtFit (conversion to zero-min integer vector may have occurred)
+#' 
+#' 
+sbmt <- function(edgelist.time, maxComms = 2, degreeCorrect = 0, directed = F,
+                 klPerNetwork = 50, tolerance = 1e-4, seed = NULL, seedComms = NULL) {
     
-        #check it's the right type of data/list format
-        if (!is.list(edgelist.time) | is.null(edgelist.time[[1]])) {
-            stop("edgelist.time should be a list where each entry is an edgelist of at least two columns, three if weights are supplied")
-        }
+    # check it's the right type of data/list format
+    if (!is.list(edgelist.time) | is.null(edgelist.time[[1]])) {
+        stop("edgelist.time should be a list where each entry is an edgelist of at least two columns, three if weights are supplied")
+    }
         
-        #extract unique nodes and re-level them to 1:N
-        nodes = sort(unique(as.character(unlist(sapply(1:length(edgelist.time), function(x) {unlist(edgelist.time[[x]][,1:2])})))))
-        N = length(nodes)
-        link.nodes = 0:(N-1); names(link.nodes) = nodes
-
-        ncol.min = min(sapply(edgelist.time, ncol))
-        
-        edgelist.time = lapply(edgelist.time, function(edgelist) {
+    # extract unique nodes and re-level them to 1:N
+    nodes = sort(unique(as.character(unlist(sapply(1:length(edgelist.time), function(x) {unlist(edgelist.time[[x]][,1:2])})))))
+    N = length(nodes)
+    link.nodes = 0:(N-1); names(link.nodes) = nodes
+    ncol.min = min(sapply(edgelist.time, ncol))
+    A.time = edgelist_to_adj(edgelist.time, directed = directed) # store array from original
+    edgelist.time = lapply(edgelist.time, function(edgelist) {
             # Argument Checks
             if (is.null(dim(edgelist)) || ncol(edgelist) < 2) {
                 stop("edgelist must have at least two columns, three if weights are supplied")
@@ -77,22 +86,45 @@ sbmt <- function(edgelist.time, maxComms = 2, degreeCorrect = 0, directed = F, k
             edgelist1
         })
 
-    # Put directed arg in logical terms
+    # put directed arg in logical terms
     if (directed == 0 || directed == 1) {directed = as.logical(directed)}
     if (!is.logical(directed)) {
         stop("directed should be FALSE or TRUE (0 or 1 OK)")
     }
-
     degreeCorrect = as.integer(degreeCorrect) #to handle T/F input
     if (is.na(degreeCorrect)) stop("degreeCorrect should be a logical or an integer in the specific range, with 0 for no degree correction")
     if (degreeCorrect == 3 & directed == FALSE) {degreeCorrect = 2} #Degree Correct three used when graph is directed to induce non-directed degree correction.
-    #seed?
+    
+    # set seed
+    if (!is.null(seed)) set.seed(seed)
 
-    ## Make the call...
+    # check seedComms if given, reformat if necessary
+    if (!is.null(seedComms)) {
+      if (length(seedComms) != N | length(unique(seedComms)) > maxComms) {
+        stop("seedComms should have length == #nodes and unique values shouldn't exceed maxComms")
+      }
+      
+      # if not integer format, convert to cpp appropriate (0,1,2,...) style
+      if (!is.integer(seedComms)) {
+        seedComms = as.numeric(as.factor(seedComms))-1
+      } else {
+        # convert to cpp range (0,1,...)
+        if (min(seedComms) != 0) {
+          seedComms = seedComms - min(seedComms)
+        }
+      } 
+      # check cpp range (0,1,2,...)
+      if (max(seedComms) > (maxComms - 1))  stop("seedComm range exceeds maxComms")
+    } else 
+    {
+      seedComms = 0
+    }
+      
+    # MAKE THE CALL
+    Results <- sbmtFit(edgelist.time, maxComms, directed, klPerNetwork, degreeCorrect, N, tolerance, seedComms)
 
-    Results <- sbmtFit(edgelist.time, maxComms, directed, klPerNetwork, degreeCorrect, N, tolerance)
-
-    #Reformat best matrices
+    
+    # reformat best matrices
     Time = length(edgelist.time)
     
     # have levels numbered in order of appearance so that lable switching doesn't affect output
@@ -100,18 +132,22 @@ sbmt <- function(edgelist.time, maxComms = 2, degreeCorrect = 0, directed = F, k
     levels(Results$FoundComms) = levels(Results$FoundComms)[rank(sapply(0:(maxComms-1), function(x) {which(Results$FoundComms==x)[1]}))]
     tmp.levels = as.numeric(levels(Results$FoundComms))+1
     Results$FoundComms = as.numeric(as.character(Results$FoundComms))
-    # Return found community membership in order of ID
+    
+    # return found community membership in order of ID
     names(Results$FoundComms) = names(link.nodes)
     
+    # reformed edge matrices
     Results$EdgeMatrix= sapply(1:Time, function(x) {
       matrix(Results$EdgeMatrix[ (maxComms^2 * (x-1) + 1) : (maxComms^2 * x) ], nrow = maxComms, ncol = maxComms, byrow = T)
     }, simplify = F,  USE.NAMES = F)
     Results$EdgeMatrix = lapply(Results$EdgeMatrix, function(x) {x[order(tmp.levels), order(tmp.levels)]})
     
+    Results$llik = tdd_sbm_llik(A.time, roles = Results$FoundComms, omega = Results$EdgeMatrix, directed = directed)
+    Results$degreeCorrect = degreeCorrect
     Results$directed = directed
     Results$klPerNetwork = klPerNetwork
-    Results$degreeCorrect = degreeCorrect
     Results$tolerance = tolerance
+    Results$init = list(seed = seed, seedComms = seedComms)
     
     Results
 }

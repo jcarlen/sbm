@@ -92,7 +92,9 @@ tdmm_n_param <- function(N, K, Time, directed = TRUE) {
 
 # ---------------------------------- Functions (discrete membership TDD-SBM) -----------------------------------------
 
-#' Calculate un-normalized log-likelihood for a TDD-SBM (time-dependent discrete-membership stochastic block model)
+#' Calculate un-normalized log-likelihood for a TDD-SBM (time-dependent discrete-membership stochastic block model).
+#' This is not the same as the "highest score" returned by sbmt, which is unnormalized in a different way
+#' 
 #
 #' @param A (time) series of network data represented  as N x N x Time array.
 #' @param roles is a length-N list of estimated block assignment for each node

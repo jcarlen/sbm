@@ -5,8 +5,48 @@
 \title{Estimate parameters of a static SBM by Kernighan-Lin algorithm. Allows for directed networks and degree correction.}
 \usage{
 sbm(edgelist, maxComms = 2, degreeCorrect = F, directed = FALSE,
-  klPerNetwork = 50, tolerance = 1e-04, seedComms = NULL,
-  seed = NULL)
+  klPerNetwork = 50, tolerance = 1e-04, seed = NULL,
+  seedComms = NULL)
+}
+\arguments{
+\item{edgelist}{Network to model in edgelist format}
+
+\item{maxComms}{maximum number of communities represented in the network}
+
+\item{degreeCorrect}{whether to apply degree correction.:
+#' \itemize{
+  \item 0 = no degree correction
+  \item 1 = the degree correction of Karrer and Newman - inherits directedness of graph
+}}
+
+\item{directed}{whether the network is directed and off-diagonal block parameters may be assymetrical}
+
+\item{klPerNetwork}{this is the number of KL runs on a network}
+
+\item{tolerance}{stopping criteria for KL. Prevents loops due to numerical errors.}
+
+\item{seed}{a random seet set for reproducibility.}
+
+\item{seedComms}{user-supplied starting values for KL runs. They will be converted to integer levels numbered starting at 0}
+}
+\value{
+FoundComms A vector of node labels with estimated block assignments.
+
+EdgeMatrix block to block edges corresponding to FoundComms
+
+HighestScore Highest score found by algorithm runs
+
+llik unnormalized log-likelihood of result as calculated by tdd_sbm_llik
+
+directed Whether input network was considered directed
+
+degreeCorrect type of degreeCorrection used in fitting
+
+klPerNetwork number of runs of KL algorithm used in fitting
+
+tolerance tolerance value used for fitting
+
+init seed = set for fitting, if supplied;  seedComms = initial communities as fed to sbmtFit (conversion to zero-min integer vector may have occurred)
 }
 \description{
 Estimate parameters of a static SBM by Kernighan-Lin algorithm. Allows for directed networks and degree correction.

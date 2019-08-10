@@ -8,14 +8,15 @@ using namespace Rcpp;
 
 // Prototype functions for time-dependent models
 void Setup(int Nodes, int MaxComms, bool Directed);
-void InitializeKLt(List AdjList, List AdjListWeight); // initializes the data structures for KL
-List sbmtFit(SEXP edgelistTime, const IntegerMatrix & edgelistTotal, const NumericVector & weightsTotal, const int maxComms, const bool directed, const int klPerNetwork, const int degreeCorrect, const int nodes);
+void InitializeKLt(List AdjList, List AdjListWeight, IntegerVector SeedComms); // initializes the data structures for KL
+//List sbmtFit(SEXP edgelistTime, const IntegerMatrix & edgelistTotal, const NumericVector & weightsTotal, const int maxComms, const bool directed, const int klPerNetwork, const int degreeCorrect, const int nodes);
 
 // ************************************************************************************************************************
 
 // [[Rcpp::export]]
 
-List sbmtFit(SEXP edgelistTime, const int maxComms, const bool directed, const int klPerNetwork, const int degreeCorrect, const int nodes, const long double tolerance)
+List sbmtFit(SEXP edgelistTime, const int maxComms, const bool directed, const int klPerNetwork,
+             const int degreeCorrect, const int nodes, const long double tolerance, const IntegerVector seedComms)
 {
     int i, j, k;
     Rcpp::List EdgelistTime(edgelistTime);
@@ -28,6 +29,7 @@ List sbmtFit(SEXP edgelistTime, const int maxComms, const bool directed, const i
     KLPerNetwork = klPerNetwork;
     DegreeCorrect = degreeCorrect;
     Tolerance = tolerance;
+    IntegerVector SeedComms = seedComms;
     
     Setup(Nodes, MaxComms, Directed);
     
@@ -77,6 +79,11 @@ List sbmtFit(SEXP edgelistTime, const int maxComms, const bool directed, const i
                     SelfEdgeCounter[t*Nodes + edgelist(i, 0)] += edgelist(i, 2);
                 }
             }
+            /*for (i = 0; i < Nodes; i++)
+            {
+              Rcout << " outdegree  "<< i << " " << outDegree[i];
+              Rcout << " degree  "<< i << " " <<Degree[i];
+            }*/
         
         outmaxCount = *std::max_element(outCount.begin(), outCount.end());
         
@@ -169,7 +176,7 @@ List sbmtFit(SEXP edgelistTime, const int maxComms, const bool directed, const i
         double prevMaxScore = -std::numeric_limits<double>::max( );
         
         // Builds objects (Vertices, Stubs, Matrix) based on Comm init (currently random init only)
-        InitializeKLt(AdjListT, AdjListWeightT);
+        InitializeKLt(AdjListT, AdjListWeightT, SeedComms);
         
         // Returns log of the initial score:
         MaxScore = ComputeInitialScore();
@@ -407,14 +414,17 @@ List sbmtFit(SEXP edgelistTime, const int maxComms, const bool directed, const i
 }
     
 // Calculate Vertices, Stubs, Ends, Matrix based on Comm initiation (currently random initiation only)
-void InitializeKLt(List AdjListT, List AdjListWeightT)
+void InitializeKLt(List AdjListT, List AdjListWeightT, IntegerVector SeedComms)
 {
     
     int i, j;
     int neighbor;
     // double sum;
-    IntegerVector randComms = randomComms(Nodes, MaxComms);
     
+   
+    if (SeedComms.length() == 1) { // <- If no seedComms given, 0 is default value, has length 1
+      SeedComms = randomComms(Nodes, MaxComms);
+    }
     
     // initialize - these apply to directed and undirected
     
@@ -427,7 +437,7 @@ void InitializeKLt(List AdjListT, List AdjListWeightT)
     
     for(i=0; i < Nodes; i++)
     {
-        BestState[i] = randComms[i];
+        BestState[i] = SeedComms[i];
         /*if(InitializationOption == 1)
          BestState[i] = TrueState[i];*/
         BestCommVertices[BestState[i]]++;
@@ -491,7 +501,6 @@ void InitializeKLt(List AdjListT, List AdjListWeightT)
             
             for(i=0; i < Nodes; i++)
             {
-                
                 BestCommStubs[BestState[i] + t*MaxComms] += outDegree[i +  t*Nodes];
                 BestCommEnds[BestState[i] + t*MaxComms] += Degree[i + t*Nodes];
                 
