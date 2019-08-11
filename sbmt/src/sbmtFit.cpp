@@ -212,7 +212,7 @@ List sbmtFit(SEXP edgelistTime, const int maxComms, const bool directed, const i
             {
                 CurrentCommVertices[i] = BestCommVertices[i];
                 
-                if (DegreeCorrect == 2 | DegreeCorrect == 3) {
+                if ( (DegreeCorrect == 2) | (DegreeCorrect == 3) ) {
                     CurrentCommStubsTotal[i] = BestCommStubsTotal[i];
                     if (Directed){
                         CurrentCommEndsTotal[i] = BestCommEndsTotal[i];

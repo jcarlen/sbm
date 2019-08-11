@@ -926,7 +926,7 @@ double ComputeProposal(int vertex, int from, int destination)
              // at the end we put all degree zeroes into their own group
              if(DegreeCorrect == 1 && (Degree[vertex + t*Nodes] <= tol && outDegree[vertex + t*Nodes] <= tol )) continue;
              
-             if( (DegreeCorrect == 2 | DegreeCorrect == 3) && (degreeTotal <= tol && outDegreeTotal <= tol)) continue;
+             if( ( (DegreeCorrect == 2) | (DegreeCorrect == 3)) && (degreeTotal <= tol && outDegreeTotal <= tol)) continue;
              
              // 1) Communities going into the vertex community
              // we first add up all the cross-terms (between communities that are not from | destination)
@@ -1288,7 +1288,7 @@ void UpdateMatrices(int vertex, int option, int from, int destination)
                 CurrentCommEnds[from + t*MaxComms] -= Degree[vertex+ t*Nodes];
                 CurrentCommEnds[destination + t*MaxComms] += Degree[vertex + t*Nodes];
                 
-                if (DegreeCorrect == 2 | DegreeCorrect == 3) {
+                if ( (DegreeCorrect == 2) | (DegreeCorrect == 3) ) {
                     CurrentCommStubsTotal[from] -= outDegree[vertex + t*Nodes] ;
                     CurrentCommStubsTotal[destination] += outDegree[vertex + t*Nodes];
                     CurrentCommEndsTotal[from] -= Degree[vertex+ t*Nodes];
@@ -1355,7 +1355,7 @@ void UpdateMatrices(int vertex, int option, int from, int destination)
                 BestCommEnds[from + t*MaxComms] -= Degree[vertex+ t*Nodes];
                 BestCommEnds[destination + t*MaxComms] += Degree[vertex + t*Nodes];
                 
-                if (DegreeCorrect == 2 | DegreeCorrect == 3) {
+                if ( (DegreeCorrect == 2) | (DegreeCorrect == 3) ) {
                     BestCommStubsTotal[from] -= outDegree[vertex + t*Nodes] ;
                     BestCommStubsTotal[destination] += outDegree[vertex + t*Nodes];
                     BestCommEndsTotal[from] -= Degree[vertex+ t*Nodes];
