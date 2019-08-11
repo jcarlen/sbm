@@ -1,7 +1,8 @@
 library(sbmt)
 data(la_byhour_edgelist)
+data(zach)
 
-# edgelist_to_adj
+# edgelist_to_adj ----
 
 test_that("edgelist to adjacency, as.array=TRUE, undireced", {
   
@@ -128,8 +129,7 @@ test_that("edgelist to adjacency, as.array=FALSE, directed", {
   
 })
 
-# tdd_sbm_llik
-# add more tests here
+# tdd_sbm_llik - add more tests ----
 
 test_that("tdd_sbm_llik - likelihood for discrete model", {
 
@@ -150,5 +150,41 @@ test_that("tdd_sbm_llik - likelihood for discrete model", {
   
 })
 
+# tdmm_sbm_llik - add more tests ----
 
-# tdmm_sbm_llik
+# Test likelihood accounting is right: "HighestScore" should change by ~ same amount as tdd_sbm_llik 
+# from initialization to final (note reported InitialScore gives varying levels of accuracy)
+
+test_that("Likelihood accounting, T = 1", {
+  A = edgelist_to_adj(list(zach), directed = T)
+  model1 = sbmt(list(zach), directed= T, degreeCorrect = 3, klPerNetwork = 1, seed = 1)
+  init =  rep_len(c(0,1), length(model1$FoundComms)); names(init) = names(model1$FoundComms)
+  
+  tmp = data.frame(zach, g1 = init[as.character(zach[,1])], g2 = init[as.character(zach[,2])])
+  init.EdgeMatrix = matrix(aggregate(rep(1, nrow(tmp)), by = list(tmp$g1,tmp$g2), sum)$x, nrow = 2, ncol = 2)
+  
+  model.init = sbmt(list(zach), directed= T, degreeCorrect = 3, klPerNetwork = 1, seedComms = init, seed = 1)
+  #These should be approximately equal:
+  x1 = model.init$HighestScore - (-447.463) #InitialScore
+  x2 = tdd_sbm_llik(A, model.init$FoundComms, model.init$EdgeMatrix, directed = T) - tdd_sbm_llik(A, init, init.EdgeMatrix, directed = T)
+  expect_true(abs(x1 - x2) < .001)
+})
+
+test_that("Likelihood accounting, T = 24", {
+  A = edgelist_to_adj(la_byhour_edgelist, directed = T)
+  model2 = sbmt(la_byhour_edgelist, directed= T, degreeCorrect = 3, klPerNetwork = 1, seed = 1)
+  init2 =  rep_len(c(0,1), length(model2$FoundComms)); names(init2) = names(model2$FoundComms)
+  init.EdgeMatrix = lapply(la_byhour_edgelist, function(data.t) {
+    tmp = data.frame(data.t, g1 = init2[as.character(data.t[,1])], g2 = init2[as.character(data.t[,2])])
+    tmp2 = aggregate(data.t$x, by = list(tmp$g1,tmp$g2), sum)$x
+    init.EdgeMatrix = matrix(tmp2, nrow = 2, ncol = 2)
+  })
+  model.init = sbmt(la_byhour_edgelist, directed= T, degreeCorrect = 3, klPerNetwork = 1, seedComms = init2, seed = 1)
+  #These should be approximately equal:
+  x1 = model.init$HighestScore - (-429267) #InitialScore - note it's rounded, so less precision below
+  x2 = tdd_sbm_llik(A, model.init$FoundComms, model.init$EdgeMatrix, directed = T) -  tdd_sbm_llik(A, init2, init.EdgeMatrix, directed = T)
+  expect_true(abs(x1 - x2) < 1)
+})
+
+
+

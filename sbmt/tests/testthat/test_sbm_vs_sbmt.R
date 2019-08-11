@@ -10,3 +10,4 @@ test_that("test time-dependent and not time-dependent code gives same results wh
   expect_equal(sbm(zach, directed = T, degreeCorrect = 1, seed = 1)$HighestScore, 
                sbmt(list(zach), directed = T, degreeCorrect = 2, seed = 1)$HighestScore)
 })
+
