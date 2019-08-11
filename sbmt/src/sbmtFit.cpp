@@ -171,7 +171,7 @@ List sbmtFit(SEXP edgelistTime, const int maxComms, const bool directed, const i
     for (int KL = 0; KL < KLPerNetwork; KL++)
 
     {
-        Rcout << "KL " << KL << std::endl;
+        Rcout << "KL " << KL + 1 << std::endl;
         long int tempvertex = 0;
         double prevMaxScore = -std::numeric_limits<double>::max( );
         
