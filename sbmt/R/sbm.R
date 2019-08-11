@@ -100,8 +100,16 @@ sbm <- function(edgelist, maxComms = 2, degreeCorrect = F, directed = FALSE,
     
     cat("\nResults!\n")
     
+    # re-level blocks in order of appearance so that label switching doesn't affect output
+    Results$FoundComms = as.factor(Results$FoundComms)
+    levels(Results$FoundComms) = levels(Results$FoundComms)[rank(sapply(0:(maxComms-1), function(x) {which(Results$FoundComms==x)[1]}))]
+    tmp.levels = as.numeric(levels(Results$FoundComms))+1
+    Results$FoundComms = as.numeric(as.character(Results$FoundComms))
     names(Results$FoundComms) = names(link.nodes) # Return found community membership in order of ID
+    
     Results$EdgeMatrix = matrix(Results$EdgeMatrix, maxComms, maxComms, byrow = T)
+    Results$EdgeMatrix = Results$EdgeMatrix[order(tmp.levels), order(tmp.levels)] #align with re-leveled blocks
+    
     Results$llik = tdd_sbm_llik(A, Results$FoundComms, Results$EdgeMatrix, directed = directed)
     Results$degreeCorrect = degreeCorrect
     Results$directed = directed

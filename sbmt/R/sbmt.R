@@ -127,7 +127,7 @@ sbmt <- function(edgelist.time, maxComms = 2, degreeCorrect = 0, directed = F,
     # reformat best matrices
     Time = length(edgelist.time)
     
-    # have levels numbered in order of appearance so that lable switching doesn't affect output
+    # re-level blocks in order of appearance so that label switching doesn't affect output
     Results$FoundComms = as.factor(Results$FoundComms)
     levels(Results$FoundComms) = levels(Results$FoundComms)[rank(sapply(0:(maxComms-1), function(x) {which(Results$FoundComms==x)[1]}))]
     tmp.levels = as.numeric(levels(Results$FoundComms))+1
@@ -140,7 +140,7 @@ sbmt <- function(edgelist.time, maxComms = 2, degreeCorrect = 0, directed = F,
     Results$EdgeMatrix= sapply(1:Time, function(x) {
       matrix(Results$EdgeMatrix[ (maxComms^2 * (x-1) + 1) : (maxComms^2 * x) ], nrow = maxComms, ncol = maxComms, byrow = T)
     }, simplify = F,  USE.NAMES = F)
-    Results$EdgeMatrix = lapply(Results$EdgeMatrix, function(x) {x[order(tmp.levels), order(tmp.levels)]})
+    Results$EdgeMatrix = lapply(Results$EdgeMatrix, function(x) {x[order(tmp.levels), order(tmp.levels)]}) #align with re-leveled blocks
     
     Results$llik = tdd_sbm_llik(A.time, roles = Results$FoundComms, omega = Results$EdgeMatrix, directed = directed)
     Results$degreeCorrect = degreeCorrect
