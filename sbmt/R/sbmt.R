@@ -142,7 +142,7 @@ sbmt <- function(edgelist.time, maxComms = 2, degreeCorrect = 0, directed = F,
     }, simplify = F,  USE.NAMES = F)
     Results$EdgeMatrix = lapply(Results$EdgeMatrix, function(x) {x[order(tmp.levels), order(tmp.levels)]}) #align with re-leveled blocks
     
-    Results$llik = tdd_sbm_llik(A.time, roles = Results$FoundComms, omega = Results$EdgeMatrix, directed = directed)
+    Results$llik = ifelse(degreeCorrect == 3, tdd_sbm_llik(A.time, roles = Results$FoundComms, omega = Results$EdgeMatrix, directed = directed), "llik currently only implemented for degreeCorrect = 3" )
     Results$degreeCorrect = degreeCorrect
     Results$directed = directed
     Results$klPerNetwork = klPerNetwork

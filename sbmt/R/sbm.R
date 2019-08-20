@@ -110,7 +110,7 @@ sbm <- function(edgelist, maxComms = 2, degreeCorrect = F, directed = FALSE,
     Results$EdgeMatrix = matrix(Results$EdgeMatrix, maxComms, maxComms, byrow = T)
     Results$EdgeMatrix = Results$EdgeMatrix[order(tmp.levels), order(tmp.levels)] #align with re-leveled blocks
     
-    Results$llik = tdd_sbm_llik(A, Results$FoundComms, Results$EdgeMatrix, directed = directed)
+    Results$llik = "Not yet implemented for sbm" #tdd_sbm_llik(A, Results$FoundComms, Results$EdgeMatrix, directed = directed)
     Results$degreeCorrect = degreeCorrect
     Results$directed = directed
     Results$klPerNetwork = klPerNetwork
