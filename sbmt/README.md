@@ -1,5 +1,3 @@
-An Rcpp package for time-dependent discrete-membership stochastic block models as described in [].
+Rcpp package to implement the time-dependent discrete stochastic block model (TDD-SBM) we introduce in ??. This package builds off the KLOptimization code of Karrer and Newman, using a direct extension of the Kergnighan-Lin algorithm for multilayer (specifically time-sliced) networks. However, the package is more general than fitting TDD-SBM, as it can also fit undirected networks, with or without degree correction, with or without multiple layers (time slices), and with any type of non-negative edge weights.
 
-Implements a Kernighan-Lin algorithm to estimate block membership, extending Karrer and Newman (2011). 
-
-(More description soon)
+(Will add examples soon)
