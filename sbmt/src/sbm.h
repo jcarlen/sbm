@@ -5,7 +5,7 @@ using namespace Rcpp;
 //-----------------------------------Global vars-------------------------------------
 
 // Not modified
-extern const int SelfTwice; ///Make 2 if you want to count self-edges twice (convention) in the directed case
+extern const int SelfTwice; ///Make 2 if you want to count self-edges twice in the directed case
 
 // Network-Dependent
 extern std::vector<double> Degree;  // Degree of nodes in the network or in Degree if directed

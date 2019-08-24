@@ -23,7 +23,7 @@ using namespace Rcpp;
 //*********************** GLOBAL VARIABLES *******************************************************************
 
 // Not modified
-const int SelfTwice = 1; ///Make 2 if you want to count self-edges twice
+const int SelfTwice = 1; ///Make 2 if you want to count self-edges twice in the directed case
 
 // Network-Dependent
 std::vector<double> Degree;  // Degree of nodes in the network or in Degree if directed
