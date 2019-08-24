@@ -104,7 +104,8 @@ tdmm_n_param <- function(N, K, Time, directed = TRUE) {
 #' @examples
 #' data("la_byhour_edgelist")
 #' A = edgelist_to_adj(la_byhour_edgelist, as.array = TRUE)
-#' model1 = sbmt(la_byhour_edgelist,  degreeCorrect = 3, directed = TRUE, klPerNetwork = 2, maxComms = 3)
+#' model1 = sbmt(la_byhour_edgelist,  degreeCorrect = 3, 
+#'   directed = TRUE, klPerNetwork = 2, maxComms = 3)
 #' tdd_sbm_llik(A, model1$FoundComms, model1$EdgeMatrix)
 #' 
 tdd_sbm_llik <- function(A, roles, omega, directed = TRUE, selfEdges = TRUE) {
