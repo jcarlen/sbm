@@ -6,9 +6,8 @@ The **sbmt** folder contains an Rcpp package to implement the time-dependent dis
 
 To install:
 
-In terminal - from folder containing sbmt > R CMD build sbmt; R CMD check sbmt; R CMD install sbmt
-
-In R - devtools::install_github("jcarlen/sbm", subdir = "sbmt") 
+In terminal - from folder containing sbmt > `R CMD build sbmt; R CMD check sbmt; R CMD install sbmt`     
+In R - `devtools::install_github("jcarlen/sbm", subdir = "sbmt")`
 
 This package is a work in progress and any suggestions for improvements or found bugs are appreciated. 
 
