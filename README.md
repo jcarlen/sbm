@@ -1,4 +1,4 @@
-# Code to fit various stochastic blockmodels 
+# Code to fit time-dependent stochastic blockmodels 
 
 ## KLOptimization 
 Contains standalone c++ code to fit degree-corrected (and not degree-corrected) stochastic blockmodels for a single (not multilayer) network.  KLOptimization.cpp is the original script from Karrer & Newman 2010 (http://www-personal.umich.edu/~mejn/dcsbm/) for undirected networks. KLOptimization_directed.cpp is my extension of that code to directed networks. See the comments of those files for implementation details.
