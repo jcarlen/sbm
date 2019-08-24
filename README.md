@@ -8,6 +8,7 @@ Contains standalone c++ code to fit degree-corrected (and not degree-corrected) 
 This **sbmt** folder contains an Rcpp package to implement the time-dependent discrete stochastic block model (TDD-SBM) we introduce in ??. It builds off the KLOptimization code of Karrer and Newman, using a direct extension of the Kergnighan-Lin algorithm for multilayer (specifically time-sliced) networks. However, the package is more general than fitting TDD-SBM, as it can also fit undirected networks, with or without degree correction, with or without multilpe layers (time slice), and with any type of non-negative edge weights.
 
 To install:
-In terminal, from folder containing sbmt > R CMD build sbmt; R CMD check sbmt; R CMD install sbmt
+In terminal - from folder containing sbmt > R CMD build sbmt; R CMD check sbmt; R CMD install sbmt
+In R - devtools::install_github("jcarlen/sbm", subdir = "sbmt") 
 
 This package is a work in progress and any suggestions for improvements or found bugs are appreciated. 
