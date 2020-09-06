@@ -31,6 +31,7 @@ adj_to_edgelist <- function(edge_array, directed = FALSE, selfEdge = TRUE) {
     if (!selfEdge) { edge_list = indices[indices$from != indices$to,] }
     edge_list = data.frame(indices, count = as.vector(x))
   })
+  return(discrete_edge_list)
 }
 
 # ---------------------------------------------------------------------------------------------------------------
@@ -147,9 +148,11 @@ library(ppsbm)
 # load data of a synthetic graph with 50 individuals and 3 clusters
 n <- 20
 Q <- 3
-Time <- generated_Q3_n20$data$Time
+Time2 <- generated_Q3_n20$data$Time
 data <- generated_Q3_n20$data
 z <- generated_Q3_n20$z
+
+
 
 intens <- generated_Q3_n20$intens
 # VEM-algo kernel
@@ -162,18 +165,28 @@ intensities.kernel <- sortIntensities(sol.kernel.intensities, z, sol.kernel$tau,
 # VEM-algo hist
 # compute data matrix with precision d_max=3
 Dmax <- 2^3
-Nijk <- statistics(data, n, Dmax, directed=TRUE, ) # NOTE THIS METHOD EXCLUDES SELF EDGES
-sol.hist <- mainVEM(list(Nijk=Nijk,Time=Time),n, Q, directed=FALSE, method='hist', d_part=0, n_perturb=0, n_random=0)[[1]]
+statistics(data,n,Dmax,directed=FALSE)
+Nijk <- statistics(data, n, Dmax, directed=TRUE) # NOTE THIS METHOD EXCLUDES SELF EDGES
+sol.hist <- mainVEM(list(Nijk=Nijk,Time2=Time2),n, Q, directed=FALSE, method='hist', d_part=5, n_perturb=0, n_random=0)[[1]]
 log.intensities.hist <- sortIntensities(sol.hist$logintensities.ql,z,sol.hist$tau,directed=FALSE)
 
-# my examples
+
+# needs statistics row dimension a power of 2
+Dmax <- 2^3
+Nijk <- statistics(data,n,Dmax,directed=FALSE)
+sol.hist <- mainVEM(list(Nijk=Nijk,Time=Time),n,Q,directed=FALSE, method='hist',
+                    d_part=0,n_perturb=0,n_random=0)[[1]]
+log.intensities.hist <- sortIntensities(sol.hist$logintensities.ql,z,sol.hist$tau,
+                                        directed=FALSE)
+
+# my examples --  
 n <- N
 Q <- n_roles
-
 #Nijk <- statistics(data, n, Dmax, directed=TRUE)
- Nijk = adj_to_edgelist(directed = TRUE, selfEdge = FALSE)
- 
-apply(discrete_edge_array, 3, as.vector)
-mainVEM(list(Nijk=Nijk,Time=Time),n, Q, directed=FALSE, method='hist', d_part=0, n_perturb=0, n_random=0)[[1]]
+Nijk = sapply(adj_to_edgelist(discrete_edge_array, directed = TRUE, selfEdge = FALSE), "[[", 3)
+# could group 3-hour chunks?
+Nijk = sapply(1:8, function(x) {rowSums(Nijk[,(3*x-2):(3*x)])})
+
+mainVEM(list(Nijk=Nijk,Time=Time),n, Q, directed=TRUE, method='hist', d_part=5, n_perturb=0, n_random=0)[[1]]
 
 # use ppsbm ARI (adjusted rand index) function?
