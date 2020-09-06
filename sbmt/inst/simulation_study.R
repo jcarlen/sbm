@@ -22,7 +22,8 @@ generate_multilayer_array <- function(N, Time, roles, omega, dc_factor = rep(1, 
 }
 
 # convert N x N x T edgelist array to length T list of edges at each time period (includes edges valued 0, ignores NA)  
-adj_to_edgelist <- function(edge_array, directed = FALSE, selfEdge = FALSE) {
+# Note tdsbm methods allows/include selfedges
+adj_to_edgelist <- function(edge_array, directed = FALSE, selfEdge = TRUE) {
   discrete_edge_list = apply(edge_array, 3, function(x) {
     indices = data.frame(which(is.finite(x), arr.ind = TRUE))
     names(indices) = c("from", "to")
@@ -31,7 +32,6 @@ adj_to_edgelist <- function(edge_array, directed = FALSE, selfEdge = FALSE) {
     edge_list = data.frame(indices, count = as.vector(x))
   })
 }
-
 
 # ---------------------------------------------------------------------------------------------------------------
 # libraries ----
@@ -46,6 +46,9 @@ N = 30
 a = 10
 b = 5
 ymax =  max(2*a, 2*b)
+
+# for degree corrected
+dc_factor = seq(0,1,length.out = n_roles+1)[-1]
 
 # curves ----
 par(mfrow = c(n_roles, n_roles))
@@ -76,7 +79,7 @@ roles_discrete = rep(1:n_roles, length.out = N)
 degree_correct = 0
 role_results = 1:N_sim
 
-  # # checks ----
+  # # checks 
   # discrete_edge_array = generate_multilayer_array(N, Time, roles_discrete, omega)
   # dim(discrete_edge_array)
   # par(mfrow = c(n_roles, n_roles))
@@ -89,31 +92,88 @@ role_results = 1:N_sim
   # image(discrete_edge_array[(1:N)[order((1:N)%%n_roles)], (1:N)[order((1:N)%%n_roles)], 13])
   # image(discrete_edge_array[(1:N)[order((1:N)%%n_roles)], (1:N)[order((1:N)%%n_roles)],19])
 
-# sbmt ----
+# - sbmt ----
 
 set.seed(1)
+role_results = 1:N_sim
+
 for (s in 1:N_sim) {
   
   discrete_edge_array = generate_multilayer_array(N, Time, roles_discrete, omega)
-  discrete_edge_list = adj_to_edgelist(discrete_edge_array, directed = TRUE, selfEdge = FALSE)
+  discrete_edge_list = adj_to_edgelist(discrete_edge_array, directed = TRUE, selfEdge = TRUE)
   discrete_sbmt = sbmt(discrete_edge_list, maxComms = 2, degreeCorrect = 0, directed = TRUE, klPerNetwork = 3)
   role_results[s] = N - sum(diag(table(discrete_sbmt$FoundComms[order(as.numeric(names(discrete_sbmt$FoundComms)))], roles_discrete)))
 }
 
+#   + results ----
+
 role_results
 
 #omega results
-par(mfrow = c(n_roles, n_redgeoles))
-sapply(tmp$EdgeMatrix, as.vector) %>% apply(1, plot, type = "l")
+par(mfrow = c(n_roles, n_roles))
+apply(sapply(discrete_sbmt$EdgeMatrix, as.vector), 1, plot, type = "l")
 
-# Degree correct case  ----
+# degree correct case  ----
 
-roles_discrete
-dc_factors = rep(c(.5,.1), each = round(N/n_roles))[1:N]
+set.seed(1)
+dc_role_results = 1:N_sim
+dc_factors = rep(dc_factor, each = round(N/n_roles))[1:N]
 
+# - sbmt ----
+
+for (s in 1:N_sim) {
+  
+  discrete_edge_array = generate_multilayer_array(N, Time, roles_discrete, omega, dc_factor = dc_factors)
+  discrete_edge_list = adj_to_edgelist(discrete_edge_array, directed = TRUE, selfEdge = TRUE)
+  dc_discrete_sbmt = sbmt(discrete_edge_list, maxComms = 2, degreeCorrect = 2, directed = TRUE, klPerNetwork = 3)
+  dc_role_results[s] = N - sum(diag(table(dc_discrete_sbmt$FoundComms[order(as.numeric(names(dc_discrete_sbmt$FoundComms)))], roles_discrete)))
+}
+
+#   + results ----
+
+dc_role_results
+
+#omega results
+par(mfrow = c(n_roles, n_roles))
+apply(sapply(dc_discrete_sbmt$EdgeMatrix, as.vector), 1, plot, type = "l")
+
+# ---------------------------------------------------------------------------------------------------------------
 # ppsbm ----
   
 install.packages("ppsbm")
-libray
+library(ppsbm)
 
-l
+
+# load data of a synthetic graph with 50 individuals and 3 clusters
+n <- 20
+Q <- 3
+Time <- generated_Q3_n20$data$Time
+data <- generated_Q3_n20$data
+z <- generated_Q3_n20$z
+
+intens <- generated_Q3_n20$intens
+# VEM-algo kernel
+sol.kernel <- mainVEM(data,n,Q,directed=FALSE,method='kernel', d_part=0, n_perturb=0)[[1]]
+# compute smooth intensity estimators
+sol.kernel.intensities <- kernelIntensities(data, sol.kernel$tau, Q, n,directed=FALSE)
+# eliminate label switching
+intensities.kernel <- sortIntensities(sol.kernel.intensities, z, sol.kernel$tau, directed=FALSE)
+
+# VEM-algo hist
+# compute data matrix with precision d_max=3
+Dmax <- 2^3
+Nijk <- statistics(data, n, Dmax, directed=TRUE, ) # NOTE THIS METHOD EXCLUDES SELF EDGES
+sol.hist <- mainVEM(list(Nijk=Nijk,Time=Time),n, Q, directed=FALSE, method='hist', d_part=0, n_perturb=0, n_random=0)[[1]]
+log.intensities.hist <- sortIntensities(sol.hist$logintensities.ql,z,sol.hist$tau,directed=FALSE)
+
+# my examples
+n <- N
+Q <- n_roles
+
+#Nijk <- statistics(data, n, Dmax, directed=TRUE)
+ Nijk = adj_to_edgelist(directed = TRUE, selfEdge = FALSE)
+ 
+apply(discrete_edge_array, 3, as.vector)
+mainVEM(list(Nijk=Nijk,Time=Time),n, Q, directed=FALSE, method='hist', d_part=0, n_perturb=0, n_random=0)[[1]]
+
+# use ppsbm ARI (adjusted rand index) function?
