@@ -42,7 +42,7 @@ library(sbmt)
 # parameters  ----
 
 n_roles = 2
-Time = 24 
+Time = 16 #use a power of two for compatibility with ppsbm hist method
 N = 30
 
 a = 10
@@ -124,9 +124,9 @@ dc_factors = rep(dc_factor, each = round(N/n_roles))[1:N]
 
 for (s in 1:N_sim) {
   
-  discrete_edge_array = generate_multilayer_array(N, Time, roles_discrete, omega, dc_factor = dc_factors)
-  discrete_edge_list = adj_to_edgelist(discrete_edge_array, directed = TRUE, selfEdge = TRUE)
-  dc_discrete_sbmt = sbmt(discrete_edge_list, maxComms = 2, degreeCorrect = 2, directed = TRUE, klPerNetwork = 3)
+  dc_discrete_edge_array = generate_multilayer_array(N, Time, roles_discrete, omega, dc_factor = dc_factors)
+  dc_discrete_edge_list = adj_to_edgelist(dc_discrete_edge_array, directed = TRUE, selfEdge = TRUE)
+  dc_discrete_sbmt = sbmt(dc_discrete_edge_list, maxComms = 2, degreeCorrect = 2, directed = TRUE, klPerNetwork = 3)
   dc_role_results[s] = N - sum(diag(table(dc_discrete_sbmt$FoundComms[order(as.numeric(names(dc_discrete_sbmt$FoundComms)))], roles_discrete)))
 }
 
@@ -142,47 +142,30 @@ apply(sapply(dc_discrete_sbmt$EdgeMatrix, as.vector), 1, plot, type = "l")
 # ppsbm ----
 library(ppsbm)
 
-# load data of a synthetic graph with 50 individuals and 3 clusters
-n <- 20
-Q <- 3
-Time2 <- generated_Q3_n20$data$Time
-data <- generated_Q3_n20$data
-z <- generated_Q3_n20$z
-
-
-intens <- generated_Q3_n20$intens
-# VEM-algo kernel
-sol.kernel <- mainVEM(data,n,Q,directed=FALSE,method='kernel', d_part=0, n_perturb=0)[[1]]
-# compute smooth intensity estimators
-sol.kernel.intensities <- kernelIntensities(data, sol.kernel$tau, Q, n,directed=FALSE)
-# eliminate label switching
-intensities.kernel <- sortIntensities(sol.kernel.intensities, z, sol.kernel$tau, directed=FALSE)
-
-# VEM-algo hist
-# compute data matrix with precision d_max=3
-Dmax <- 2^3
-statistics(data,n,Dmax,directed=FALSE)
-Nijk <- statistics(data, n, Dmax, directed=TRUE) # NOTE THIS METHOD EXCLUDES SELF EDGES
-sol.hist <- mainVEM(list(Nijk=Nijk,Time2=Time2),n, Q, directed=FALSE, method='hist', d_part=5, n_perturb=0, n_random=0)[[1]]
-log.intensities.hist <- sortIntensities(sol.hist$logintensities.ql,z,sol.hist$tau,directed=FALSE)
-
-
-# needs statistics row dimension a power of 2
-Dmax <- 2^3
-Nijk <- statistics(data,n,Dmax,directed=FALSE)
-sol.hist <- mainVEM(list(Nijk=Nijk,Time=Time),n,Q,directed=FALSE, method='hist',
-                    d_part=0,n_perturb=0,n_random=0)[[1]]
-log.intensities.hist <- sortIntensities(sol.hist$logintensities.ql,z,sol.hist$tau,
-                                        directed=FALSE)
-
-# my examples --  
-n <- N
-Q <- n_roles
 #Nijk <- statistics(data, n, Dmax, directed=TRUE)
 Nijk = sapply(adj_to_edgelist(discrete_edge_array, directed = TRUE, selfEdge = FALSE), "[[", 3); dim(Nijk)
-# could group 3-hour chunks?
-Nijk = sapply(1:8, function(x) {rowSums(Nijk[,(3*x-2):(3*x)])}) ; dim(Nijk)
+discrete_ppsbm = mainVEM(list(Nijk=Nijk,Time=Time), N, Qmin = 1, Qmax = 4, directed=TRUE, method='hist', d_part=0, n_perturb=0, n_random=0)
 
-mainVEM(list(Nijk=Nijk,Time=Time),n, Q, directed=TRUE, method='hist', d_part=5, n_perturb=0, n_random=0)[[1]]
+modelSelection_Q(list(Nijk=Nijk,Time=Time), N, Qmin = 1, Qmax = 4, directed = TRUE, sparse = FALSE, discrete_ppsbm)$Qbest
+
+par(mfrow = c(2*n_roles, n_roles))
+apply(exp(discrete_ppsbm[[1]]$logintensities.ql), 1, plot, type = "l")
+apply(discrete_ppsbm$tau, 2, which.max)
+
+dc_Nijk = sapply(adj_to_edgelist(dc_discrete_edge_array, directed = TRUE, selfEdge = FALSE), "[[", 3); dim(dc_Nijk)
+dc_discrete_ppsbm = mainVEM(list(Nijk=dc_Nijk,Time=Time), N, Qmin = 1, Qmax = 4, directed=TRUE, method='hist', d_part=0, n_perturb=0, n_random=0)
+
+selected_Q = modelSelection_Q(list(Nijk=dc_Nijk,Time=Time), N, Qmin = 1, Qmax = 4, directed = TRUE, sparse = FALSE, dc_discrete_ppsbm)$Qbest
+
+apply(exp(dc_discrete_ppsbm[[selected_Q]]$logintensities.ql), 1, plot, type = "l", col = "blue")
+apply(dc_discrete_ppsbm[[selected_Q]]$tau, 2, which.max)
+
+par(mfrow = c(3, 3))
+apply(exp(dc_discrete_ppsbm[[3]]$logintensities.ql), 1, plot, type = "l", col = "blue")
+apply(dc_discrete_ppsbm[[3]]$tau, 2, which.max)
+
+par(mfrow = c(4, 4))
+apply(exp(dc_discrete_ppsbm[[4]]$logintensities.ql), 1, plot, type = "l", col = "blue")
+apply(dc_discrete_ppsbm[[4]]$tau, 2, which.max)
 
 # use ppsbm ARI (adjusted rand index) function?
