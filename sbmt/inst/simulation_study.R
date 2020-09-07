@@ -126,7 +126,7 @@ for (s in 1:N_sim) {
   
   dc_discrete_edge_array = generate_multilayer_array(N, Time, roles_discrete, omega, dc_factor = dc_factors)
   dc_discrete_edge_list = adj_to_edgelist(dc_discrete_edge_array, directed = TRUE, selfEdge = TRUE)
-  dc_discrete_sbmt = sbmt(dc_discrete_edge_list, maxComms = 2, degreeCorrect = 2, directed = TRUE, klPerNetwork = 3)
+  dc_discrete_sbmt = sbmt(dc_discrete_edge_list, maxComms = 2, degreeCorrect = 3, directed = TRUE, klPerNetwork = 3)
   dc_role_results[s] = N - sum(diag(table(dc_discrete_sbmt$FoundComms[order(as.numeric(names(dc_discrete_sbmt$FoundComms)))], roles_discrete)))
 }
 
@@ -206,4 +206,3 @@ table(apply(dc_discrete_ppsbm_init[[selected_Q]]$tau, 2, which.max), roles_discr
 
 # london bike share
 
-lbs = load("~/Downloads/ppsbm-files/data/")
