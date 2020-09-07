@@ -25,11 +25,12 @@ generate_multilayer_array <- function(N, Time, roles, omega, dc_factor = rep(1, 
 # Note tdsbm methods allows/include selfedges
 adj_to_edgelist <- function(edge_array, directed = FALSE, selfEdge = TRUE) {
   discrete_edge_list = apply(edge_array, 3, function(x) {
-    indices = data.frame(which(is.finite(x), arr.ind = TRUE))
-    names(indices) = c("from", "to")
-    if (!directed) { indices = indices[indices$from <= indices$to,] }
-    if (!selfEdge) { edge_list = indices[indices$from != indices$to,] }
-    edge_list = data.frame(indices, count = as.vector(x))
+    indices = which(is.finite(x), arr.ind = TRUE)
+    edge_list = data.frame(cbind(indices, as.vector(x)))
+    names(edge_list) = c("from", "to", "count")
+    if (!directed) { edge_list = edge_list[edge_list$from <= edge_list$to,] }
+    if (!selfEdge) { edge_list = edge_list[edge_list$from != edge_list$to,] }
+    return(edge_list)
   })
   return(discrete_edge_list)
 }
@@ -73,7 +74,6 @@ omega_22 = omega_11
 omega = array(rbind(omega_11, omega_21, omega_12, omega_22), dim = c(n_roles, n_roles, Time)) #left most index moves fastest
     
 # simulate roles and edges ----      
-
 # no degree correction case ----
 N_sim = 10
 roles_discrete = rep(1:n_roles, length.out = N)
@@ -114,7 +114,7 @@ role_results
 par(mfrow = c(n_roles, n_roles))
 apply(sapply(discrete_sbmt$EdgeMatrix, as.vector), 1, plot, type = "l")
 
-# degree correct case  ----
+# degree corrected case  ----
 
 set.seed(1)
 dc_role_results = 1:N_sim
@@ -140,10 +140,7 @@ apply(sapply(dc_discrete_sbmt$EdgeMatrix, as.vector), 1, plot, type = "l")
 
 # ---------------------------------------------------------------------------------------------------------------
 # ppsbm ----
-  
-install.packages("ppsbm")
 library(ppsbm)
-
 
 # load data of a synthetic graph with 50 individuals and 3 clusters
 n <- 20
@@ -151,7 +148,6 @@ Q <- 3
 Time2 <- generated_Q3_n20$data$Time
 data <- generated_Q3_n20$data
 z <- generated_Q3_n20$z
-
 
 
 intens <- generated_Q3_n20$intens
@@ -183,9 +179,9 @@ log.intensities.hist <- sortIntensities(sol.hist$logintensities.ql,z,sol.hist$ta
 n <- N
 Q <- n_roles
 #Nijk <- statistics(data, n, Dmax, directed=TRUE)
-Nijk = sapply(adj_to_edgelist(discrete_edge_array, directed = TRUE, selfEdge = FALSE), "[[", 3)
+Nijk = sapply(adj_to_edgelist(discrete_edge_array, directed = TRUE, selfEdge = FALSE), "[[", 3); dim(Nijk)
 # could group 3-hour chunks?
-Nijk = sapply(1:8, function(x) {rowSums(Nijk[,(3*x-2):(3*x)])})
+Nijk = sapply(1:8, function(x) {rowSums(Nijk[,(3*x-2):(3*x)])}) ; dim(Nijk)
 
 mainVEM(list(Nijk=Nijk,Time=Time),n, Q, directed=TRUE, method='hist', d_part=5, n_perturb=0, n_random=0)[[1]]
 
