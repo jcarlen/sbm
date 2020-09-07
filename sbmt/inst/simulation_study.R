@@ -52,7 +52,6 @@ ymax =  max(2*a, 2*b)
 
 # for degree corrected
 dc_factor = seq(0,1,length.out = n_roles+1)[-1]
-
 # curves ----
 par(mfrow = c(n_roles, n_roles))
 curve(b*sin(x*pi/Time) + b, 0, Time, ylim = c(0, ymax))
@@ -150,10 +149,10 @@ Nijk = sapply(adj_to_edgelist(discrete_edge_array, directed = TRUE, selfEdge = F
 discrete_ppsbm = mainVEM(list(Nijk=Nijk,Time=Time), N, Qmin = 1, Qmax = 4, directed=TRUE, 
                          method='hist', d_part=0, n_perturb=0, n_random=0)
 
+# number of blocks selected
 selected_Q = modelSelection_Q(list(Nijk=Nijk,Time=Time), N, Qmin = 1, Qmax = 4, directed = TRUE, sparse = FALSE, discrete_ppsbm)$Qbest
 selected_Q
-selected_Q == n_roles #shoudl equal n_roles
-
+selected_Q == n_roles #should equal n_roles
 # omegas
 par(mfrow = c(n_roles, n_roles))
 apply(exp(discrete_ppsbm[[selected_Q]]$logintensities.ql), 1, plot, type = "l")
@@ -165,18 +164,46 @@ table(apply(discrete_ppsbm[[selected_Q]]$tau, 2, which.max), roles_discrete)
 dc_Nijk = sapply(adj_to_edgelist(dc_discrete_edge_array, directed = TRUE, selfEdge = FALSE), "[[", 3); dim(dc_Nijk)
 dc_discrete_ppsbm = mainVEM(list(Nijk=dc_Nijk,Time=Time), N, Qmin = 1, Qmax = 4, directed=TRUE, 
                             method='hist', d_part=0, n_perturb=0, n_random=0)
-
+# number of blocks selected
 selected_Q = modelSelection_Q(list(Nijk=dc_Nijk,Time=Time), N, Qmin = 1, Qmax = 4, directed = TRUE, sparse = FALSE, dc_discrete_ppsbm)$Qbest
 selected_Q
 selected_Q == n_roles
-
 # omegas
 par(mfrow = c(selected_Q, selected_Q))
 apply(exp(dc_discrete_ppsbm[[selected_Q]]$logintensities.ql), 1, plot, type = "l", col = "blue")
 # role match?
 apply(dc_discrete_ppsbm[[selected_Q]]$tau, 2, which.max)
 table(apply(dc_discrete_ppsbm[[selected_Q]]$tau, 2, which.max), roles_discrete)
+# with true number of groups?
+par(mfrow = c(n_roles, n_roles))
+apply(exp(dc_discrete_ppsbm[[n_roles]]$logintensities.ql), 1, plot, type = "l", col = "blue")
+apply(dc_discrete_ppsbm[[n_roles]]$tau, 2, which.max)
+table(apply(dc_discrete_ppsbm[[n_roles]]$tau, 2, which.max), roles_discrete)
+
+# try with 2 groups initializing with truth?  ----
+# with perfect initialization it can find it, but still doesn't understand degree heterogeneity
+# and still thinks three blocks are better with the higher and lower intensity versions of one of the blocks
+# with enough degree heterogeneity it may not recover 
+# *** (see if the bike example resolves this, otherwise consider adding a third low-activity group) ***
+discrete.init.tau = matrix(0, N, n_roles)
+discrete.init.tau[cbind(1:N, roles_discrete)] = 1; discrete.init.tau = t(discrete.init.tau)
+discrete.init.tau
+dc_discrete_ppsbm_init = mainVEM(list(Nijk=dc_Nijk,Time=Time), N, Qmin = 1, Qmax = 3, directed=TRUE, 
+                            method='hist', d_part=0, n_perturb=0, n_random=0, 
+                            init.tau = list(matrix(1, nrow = N), discrete.init.tau, rbind(discrete.init.tau, 0)))
+
+# number of blocks selected
+selected_Q = modelSelection_Q(list(Nijk=dc_Nijk,Time=Time), N, Qmin = 1, Qmax = 3, directed = TRUE, sparse = FALSE, dc_discrete_ppsbm_init)$Qbest
+selected_Q
+# omegas
+par(mfrow = c(selected_Q, selected_Q))
+apply(exp(dc_discrete_ppsbm_init[[selected_Q]]$logintensities.ql), 1, plot, type = "l", col = "blue")
+# role match?
+apply(dc_discrete_ppsbm_init[[selected_Q]]$tau, 2, which.max)
+table(apply(dc_discrete_ppsbm_init[[selected_Q]]$tau, 2, which.max), roles_discrete)
 
 # add a mixed-membership example? ----
 
+# london bike share
 
+lbs = load("~/Downloads/ppsbm-files/data/")
