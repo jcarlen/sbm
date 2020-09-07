@@ -2,7 +2,7 @@
 
 ## sbmt (TDD-SBM)
 
-The **sbmt** folder contains an Rcpp package to implement the time-dependent discrete stochastic block model (TDD-SBM) we introduce in ??. It builds off the KLOptimization code of Karrer and Newman, using a direct extension of the Kergnighan-Lin algorithm for multilayer (specifically time-sliced) networks. However, the package is more general than fitting TDD-SBM, as it can also fit undirected networks, with or without degree correction, with or without multiple layers (time slices), and with any type of non-negative edge weights.
+The **sbmt** folder contains an Rcpp package to implement the time-dependent discrete stochastic block model (TDD-SBM) we introduce in https://arxiv.org/abs/1908.09440. It builds off the KLOptimization code of Karrer and Newman, using a direct extension of the Kergnighan-Lin algorithm for multilayer (specifically time-sliced) networks. However, the package is more general than fitting TDD-SBM, as it can also fit undirected networks, with or without degree correction, with or without multiple layers (time slices), and with any type of non-negative edge weights.
 
 To install:
 
