@@ -21,11 +21,12 @@ generate_multilayer_array <- function(N, Time, roles, omega, dc_factor = rep(1, 
   return(discrete_edge_array)
 }
 
-# convert N x N x T edgelist array to length T list of edges at each time period (includes edges valued 0, ignores NA)  
+# convert N x N x T edgelist array to length T list of edges at each time period. (Handle NA?)
 # Note tdsbm methods allows/include selfedges
 adj_to_edgelist <- function(edge_array, directed = FALSE, selfEdge = TRUE) {
   discrete_edge_list = apply(edge_array, 3, function(x) {
-    indices = which(is.finite(x), arr.ind = TRUE)
+    N = dim(edge_array)[1]
+    indices = expand.grid(1:N,1:N)
     edge_list = data.frame(cbind(indices, as.vector(x)))
     names(edge_list) = c("from", "to", "count")
     if (!directed) { edge_list = edge_list[edge_list$from <= edge_list$to,] }
@@ -114,7 +115,7 @@ role_results
 par(mfrow = c(n_roles, n_roles))
 apply(sapply(discrete_sbmt$EdgeMatrix, as.vector), 1, plot, type = "l")
 
-# degree corrected case  ----
+# degree correction case  ----
 
 set.seed(1)
 dc_role_results = 1:N_sim
@@ -142,30 +143,40 @@ apply(sapply(dc_discrete_sbmt$EdgeMatrix, as.vector), 1, plot, type = "l")
 # ppsbm ----
 library(ppsbm)
 
-#Nijk <- statistics(data, n, Dmax, directed=TRUE)
+# no degree correction case. their model works as expected ----
+# Use the "hist" method because agrees more closely with out discrete time slices and requires little data manipulation
+
 Nijk = sapply(adj_to_edgelist(discrete_edge_array, directed = TRUE, selfEdge = FALSE), "[[", 3); dim(Nijk)
-discrete_ppsbm = mainVEM(list(Nijk=Nijk,Time=Time), N, Qmin = 1, Qmax = 4, directed=TRUE, method='hist', d_part=0, n_perturb=0, n_random=0)
+discrete_ppsbm = mainVEM(list(Nijk=Nijk,Time=Time), N, Qmin = 1, Qmax = 4, directed=TRUE, 
+                         method='hist', d_part=0, n_perturb=0, n_random=0)
 
-modelSelection_Q(list(Nijk=Nijk,Time=Time), N, Qmin = 1, Qmax = 4, directed = TRUE, sparse = FALSE, discrete_ppsbm)$Qbest
+selected_Q = modelSelection_Q(list(Nijk=Nijk,Time=Time), N, Qmin = 1, Qmax = 4, directed = TRUE, sparse = FALSE, discrete_ppsbm)$Qbest
+selected_Q
+selected_Q == n_roles #shoudl equal n_roles
 
-par(mfrow = c(2*n_roles, n_roles))
-apply(exp(discrete_ppsbm[[1]]$logintensities.ql), 1, plot, type = "l")
-apply(discrete_ppsbm$tau, 2, which.max)
+# omegas
+par(mfrow = c(n_roles, n_roles))
+apply(exp(discrete_ppsbm[[selected_Q]]$logintensities.ql), 1, plot, type = "l")
+# role match?
+apply(discrete_ppsbm[[selected_Q]]$tau, 2, which.max)
+table(apply(discrete_ppsbm[[selected_Q]]$tau, 2, which.max), roles_discrete)
 
+# degree correction case ---
 dc_Nijk = sapply(adj_to_edgelist(dc_discrete_edge_array, directed = TRUE, selfEdge = FALSE), "[[", 3); dim(dc_Nijk)
-dc_discrete_ppsbm = mainVEM(list(Nijk=dc_Nijk,Time=Time), N, Qmin = 1, Qmax = 4, directed=TRUE, method='hist', d_part=0, n_perturb=0, n_random=0)
+dc_discrete_ppsbm = mainVEM(list(Nijk=dc_Nijk,Time=Time), N, Qmin = 1, Qmax = 4, directed=TRUE, 
+                            method='hist', d_part=0, n_perturb=0, n_random=0)
 
 selected_Q = modelSelection_Q(list(Nijk=dc_Nijk,Time=Time), N, Qmin = 1, Qmax = 4, directed = TRUE, sparse = FALSE, dc_discrete_ppsbm)$Qbest
+selected_Q
+selected_Q == n_roles
 
+# omegas
+par(mfrow = c(selected_Q, selected_Q))
 apply(exp(dc_discrete_ppsbm[[selected_Q]]$logintensities.ql), 1, plot, type = "l", col = "blue")
+# role match?
 apply(dc_discrete_ppsbm[[selected_Q]]$tau, 2, which.max)
+table(apply(dc_discrete_ppsbm[[selected_Q]]$tau, 2, which.max), roles_discrete)
 
-par(mfrow = c(3, 3))
-apply(exp(dc_discrete_ppsbm[[3]]$logintensities.ql), 1, plot, type = "l", col = "blue")
-apply(dc_discrete_ppsbm[[3]]$tau, 2, which.max)
+# add a mixed-membership example? ----
 
-par(mfrow = c(4, 4))
-apply(exp(dc_discrete_ppsbm[[4]]$logintensities.ql), 1, plot, type = "l", col = "blue")
-apply(dc_discrete_ppsbm[[4]]$tau, 2, which.max)
 
-# use ppsbm ARI (adjusted rand index) function?
