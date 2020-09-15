@@ -2,8 +2,8 @@
 #
 #' Estimate parameters of a static SBM by Kernighan-Lin algorithm. Allows for directed networks and degree correction.
 #
-#' @param edgelist Network to model in edgelist format
-#' @param maxComms maximum number of communities represented in the network
+#' @param edgelist Network in edgelist format. The first two columns designate edges "from" and "to", and the third, if present, is the weight/count for each edge.
+#' @param maxComms maximum number of communities (blocks) represented in the network
 #' @param degreeCorrect whether to apply degree correction.:
 #' #' \itemize{
 #'   \item 0 = no degree correction
@@ -23,7 +23,7 @@
 #'@return degreeCorrect type of degreeCorrection used in fitting
 #'@return klPerNetwork number of runs of KL algorithm used in fitting
 #'@return tolerance tolerance value used for fitting
-#'@return init seed = set for fitting, if supplied;  seedComms = initial communities as fed to sbmtFit (conversion to zero-min integer vector may have occurred)
+#'@return init seed = set for fitting, if supplied;  seedComms = initial communities (blocks) as fed to sbmtFit (conversion to zero-min integer vector may have occurred)
 #'
 #' 
 sbm <- function(edgelist, maxComms = 2, degreeCorrect = F, directed = FALSE,

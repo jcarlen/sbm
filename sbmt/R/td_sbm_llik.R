@@ -1,34 +1,35 @@
 # Functions to evaluate log likelihood for TDD-SBM and TDMM-SBM 
-# Used to compare output ofdiscrete and mixed models, and different estimation methods
+# Used to compare output of discrete and mixed models, and different estimation methods
 # Although sbmt returns a "highest scores" it's an un-normalized llik that's not comparable to mixed model results
 # Jane Carlen
 # TO DO: add unirected options for these functions
 
 # ------------------------------- Helpers ----------------------------------------------
 
-#' Convert time-sliced edgelist to time-sliced adjacency matrix (helper for likelihood functions)
+#' Convert a multilayer edgelist to a multiplayer adjacency matrix. Helper for pac
 #
-#' @param edgelist A (time) series of network data represented as a list of edgelists. Assumes all edgelist slices have same names and number of columns, first two columns designate "from" and "to" for edges and third, if present, is count.
+#' @param edgelist.time A (time) series of networks represented as a list of edgelists. 
+#' Assumes all edgelist slices have the same names and number of columns. The first two columns designate edges "from" and "to", and the third, if present, is the weight/count for that edge.
 #' @param selfedges If true, include self-edges in edgelist in converted adjacency matrix. If false, diagonal of adjaceny matrix is zero.
 #' @param as.array If true, return an N x N x Time array instead of a list of adjacency matrices.
-#' @param directed Are the edges in the edgelist directed?
+#' @param directed Are the edges in the edgelist.time directed?
 #'
-edgelist_to_adj <- function(edgelist, selfedges = TRUE, as.array = TRUE, directed = TRUE) {
-  Time = length(edgelist)
-  E = do.call("rbind", edgelist)
+edgelist_to_adj <- function(edgelist.time, selfedges = TRUE, as.array = TRUE, directed = TRUE) {
+  Time = length(edgelist.time)
+  E = do.call("rbind", edgelist.time)
   S = unique(c(as.character(E[,1]), as.character(E[,2])))
   N = length(S)
   Nodes = 1:N; names(Nodes) = S
   adjlist = lapply(1:Time, function(t) {
     #add count if not present
-    if (ncol(edgelist[[t]]) == 2) {edgelist[[t]][,3] = 1}
-    names(edgelist[[t]]) = c("from", "to", "count")
+    if (ncol(edgelist.time[[t]]) == 2) {edgelist.time[[t]][,3] = 1}
+    names(edgelist.time[[t]]) = c("from", "to", "count")
     # aggregate by "from" "to" pairs
-    edgelist[[t]] = stats::aggregate(count ~ from + to, data = edgelist[[t]], sum)
+    edgelist.time[[t]] = stats::aggregate(count ~ from + to, data = edgelist.time[[t]], sum)
     # convert to adjacency matrix
     adjlist.t = matrix(0,N,N, dimnames = list(S, S));
-    adjlist.t[ cbind(   Nodes[as.character(edgelist[[t]][,1])], 
-                        Nodes[as.character(edgelist[[t]][,2])] ) ] = edgelist[[t]][,3]
+    adjlist.t[ cbind(   Nodes[as.character(edgelist.time[[t]][,1])], 
+                        Nodes[as.character(edgelist.time[[t]][,2])] ) ] = edgelist.time[[t]][,3]
     # remove self-edges?
     if (selfedges == FALSE) {diag(adjlist.t) = 0}
     if (directed == FALSE) {
@@ -47,7 +48,27 @@ edgelist_to_adj <- function(edgelist, selfedges = TRUE, as.array = TRUE, directe
   
 }
 
-#' Calculate the un-normalized log-likelihood for a single timeslice given mu as input (works for discrete or continuous). Helper for tdd_sbm_llik and tdmm_sbm_llik
+#' convert N x N x T edgelist array to length T list of edges at each time period. (Handle NA?)
+#' 
+#' Note tdsbm methods allow/include selfedges.
+#' @param A is a (time) series of network data represented as a N x N x Time array (each slice represented as an adjacency matrix).
+#' @param directed Are the edges in the edgelist directed?
+adj_to_edgelist <- function(A, directed = FALSE, selfEdge = TRUE) {
+  discrete_edge_list = apply(A, 3, function(x) {
+    N = dim(A)[1]
+    indices = expand.grid(1:N,1:N)
+    edge_list = data.frame(cbind(indices, as.vector(x)))
+    names(edge_list) = c("from", "to", "count")
+    if (!directed) { edge_list = edge_list[edge_list$from <= edge_list$to,] }
+    if (!selfEdge) { edge_list = edge_list[edge_list$from != edge_list$to,] }
+    # remove zeros for efficiency
+    edge_list = edge_list[edge_list$count>0, ]
+    return(edge_list)
+  })
+  return(discrete_edge_list)
+}
+
+#' Calculate the un-normalized log-likelihood for a single network slice given mu as input (works for discrete or continuous). Helper for tdd_sbm_llik and tdmm_sbm_llik
 #' #
 #' @param A_t is a single-time network, represented as a N x N adjacency matrix
 #' @param mu mu is a N x N matrix of edge expected values at this time slice

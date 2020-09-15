@@ -12,10 +12,12 @@
 ##        Implement undirected degree correction for static sbm on directed network?
 
 #' Estimate parameters of the TDD-SBM (time-dependent discrete stochastic block model) by Kernighan-Lin algorithm.
+#' Note that although the motivation for this function and package is analyzing time-sliced networks, it can handle multilayer networks more generally as long as the primary input is a list of networks in edgelist format. (Slice parameters are independent given block membership.) 
 #
-#' @param edgelist.time Time-sliced network to model, formatted as a list of networks in edgelist format
+#' @param edgelist.time A (time) series of networks represented as a list of edgelists. 
+#' Assumes all edgelist slices have the same names and number of columns. The first two columns designate edges "from" and "to", and the third, if present, is the weight/count for each edge.
 #' @param klPerNetwork this is the number of KL runs on a network
-#' @param maxComms maximum number of communities represented in the network
+#' @param maxComms maximum number of communities (blocks) represented in the network
 #' @param degreeCorrect whether to apply degree correction:
 #' \itemize{
 #'   \item 0 = no degree correction
@@ -26,7 +28,7 @@
 #' @param directed whether the network is directed and off-diagonal block parameters may be assymetrical
 #'@param tolerance stopping criteria for KL. Prevents loops due to numerical errors.
 #'@param seed a random seet set for reproducibility.
-#'@param seedComms user-supplied starting values for KL runs. They will be converted to integer levels numbered starting at 0
+#'@param seedComms user-supplied starting values for KL runs. They will be converted to integer levels numbered starting at 0.
 #
 #'@return FoundComms A vector of node labels with estimated block assignments.
 #'@return EdgeMatrix time-specific block-to-block edges corresponding to FoundComms
@@ -36,7 +38,7 @@
 #'@return degreeCorrect type of degreeCorrection used in fitting
 #'@return klPerNetwork number of runs of KL algorithm used in fitting
 #'@return tolerance tolerance value used for fitting
-#'@return init seed = set for fitting, if supplied;  seedComms = initial communities as fed to sbmtFit (conversion to zero-min integer vector may have occurred)
+#'@return init seed = set for fitting, if supplied;  seedComms = initial communities (blocks) as fed to sbmtFit (conversion to zero-min integer vector may have occurred)
 #' 
 #' 
 sbmt <- function(edgelist.time, maxComms = 2, degreeCorrect = 0, directed = F,

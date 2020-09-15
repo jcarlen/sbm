@@ -23,23 +23,6 @@ generate_multilayer_array <- function(N, Time, roles, omega, dc_factor = rep(1, 
   return(discrete_edge_array)
 }
 
-# convert N x N x T edgelist array to length T list of edges at each time period. (Handle NA?)
-# Note tdsbm methods allows/include selfedges
-adj_to_edgelist <- function(edge_array, directed = FALSE, selfEdge = TRUE) {
-  discrete_edge_list = apply(edge_array, 3, function(x) {
-    N = dim(edge_array)[1]
-    indices = expand.grid(1:N,1:N)
-    edge_list = data.frame(cbind(indices, as.vector(x)))
-    names(edge_list) = c("from", "to", "count")
-    if (!directed) { edge_list = edge_list[edge_list$from <= edge_list$to,] }
-    if (!selfEdge) { edge_list = edge_list[edge_list$from != edge_list$to,] }
-    # remove zeros for efficiency
-    edge_list = edge_list[edge_list$count>0, ]
-    return(edge_list)
-  })
-  return(discrete_edge_list)
-}
-
 # ---------------------------------------------------------------------------------------------------------------
 # libraries ----
 library(sbmt)
