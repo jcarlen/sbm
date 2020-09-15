@@ -2,7 +2,8 @@
 % Please edit documentation in R/sbmt.R
 \name{sbmt}
 \alias{sbmt}
-\title{Estimate parameters of the TDD-SBM (time-dependent discrete stochastic block model) by Kernighan-Lin algorithm.}
+\title{Estimate parameters of the TDD-SBM (time-dependent discrete stochastic block model) by Kernighan-Lin algorithm.
+Note that although the motivation for this function and package is analyzing time-sliced networks, it can handle multilayer networks more generally as long as the primary input is a list of networks in edgelist format. (Slice parameters are independent given block membership.)}
 \usage{
 sbmt(
   edgelist.time,
@@ -16,9 +17,10 @@ sbmt(
 )
 }
 \arguments{
-\item{edgelist.time}{Time-sliced network to model, formatted as a list of networks in edgelist format}
+\item{edgelist.time}{A (time) series of networks represented as a list of edgelists. 
+Assumes all edgelist slices have the same names and number of columns. The first two columns designate edges "from" and "to", and the third, if present, is the count for each edge.}
 
-\item{maxComms}{maximum number of communities represented in the network}
+\item{maxComms}{maximum number of communities (blocks) represented in the network}
 
 \item{degreeCorrect}{whether to apply degree correction:
 \itemize{
@@ -36,7 +38,7 @@ sbmt(
 
 \item{seed}{a random seet set for reproducibility.}
 
-\item{seedComms}{user-supplied starting values for KL runs. They will be converted to integer levels numbered starting at 0}
+\item{seedComms}{user-supplied starting values for KL runs. They will be converted to integer levels numbered starting at 0.}
 }
 \value{
 FoundComms A vector of node labels with estimated block assignments.
@@ -55,8 +57,9 @@ klPerNetwork number of runs of KL algorithm used in fitting
 
 tolerance tolerance value used for fitting
 
-init seed = set for fitting, if supplied;  seedComms = initial communities as fed to sbmtFit (conversion to zero-min integer vector may have occurred)
+init seed = set for fitting, if supplied;  seedComms = initial communities (blocks) as fed to sbmtFit (conversion to zero-min integer vector may have occurred)
 }
 \description{
 Estimate parameters of the TDD-SBM (time-dependent discrete stochastic block model) by Kernighan-Lin algorithm.
+Note that although the motivation for this function and package is analyzing time-sliced networks, it can handle multilayer networks more generally as long as the primary input is a list of networks in edgelist format. (Slice parameters are independent given block membership.)
 }

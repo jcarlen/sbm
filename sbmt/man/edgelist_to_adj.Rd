@@ -2,19 +2,27 @@
 % Please edit documentation in R/td_sbm_llik.R
 \name{edgelist_to_adj}
 \alias{edgelist_to_adj}
-\title{Convert time-sliced edgelist to time-sliced adjacency matrix (helper for likelihood functions)}
+\title{Convert a multilayer edgelist to a multilayer adjacency matrix (as a list of adjacency matrices or N x N x T array depending on the `as.array` parameter). 
+Used in pre-processing for likelihood functions.}
 \usage{
-edgelist_to_adj(edgelist, selfedges = TRUE, as.array = TRUE, directed = TRUE)
+edgelist_to_adj(
+  edgelist.time,
+  selfedges = TRUE,
+  as.array = TRUE,
+  directed = TRUE
+)
 }
 \arguments{
-\item{edgelist}{A (time) series of network data represented as a list of edgelists. Assumes all edgelist slices have same names and number of columns, first two columns designate "from" and "to" for edges and third, if present, is count.}
+\item{edgelist.time}{A (time) series of networks represented as a list of edgelists. 
+Assumes all edgelist slices have the same names and number of columns. The first two columns designate edges "from" and "to", and the third, if present, is the count (or more generally the weight) for that edge.}
 
-\item{selfedges}{If true, include self-edges in edgelist in converted adjacency matrix. If false, diagonal of adjaceny matrix is zero.}
+\item{selfedges}{If true, include self-edges in converted adjacency matrix. If false, diagonal of adjaceny matrix is zero.}
 
 \item{as.array}{If true, return an N x N x Time array instead of a list of adjacency matrices.}
 
-\item{directed}{Are the edges in the edgelist directed?}
+\item{directed}{Are the edges in the edgelist.time directed?}
 }
 \description{
-Convert time-sliced edgelist to time-sliced adjacency matrix (helper for likelihood functions)
+Convert a multilayer edgelist to a multilayer adjacency matrix (as a list of adjacency matrices or N x N x T array depending on the `as.array` parameter). 
+Used in pre-processing for likelihood functions.
 }

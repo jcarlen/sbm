@@ -6,11 +6,12 @@
 
 # ------------------------------- Helpers ----------------------------------------------
 
-#' Convert a multilayer edgelist to a multiplayer adjacency matrix. Helper for pac
+#' Convert a multilayer edgelist to a multilayer adjacency matrix (as a list of adjacency matrices or N x N x T array depending on the `as.array` parameter). 
+#' Used in pre-processing for likelihood functions.
 #
 #' @param edgelist.time A (time) series of networks represented as a list of edgelists. 
-#' Assumes all edgelist slices have the same names and number of columns. The first two columns designate edges "from" and "to", and the third, if present, is the weight/count for that edge.
-#' @param selfedges If true, include self-edges in edgelist in converted adjacency matrix. If false, diagonal of adjaceny matrix is zero.
+#' Assumes all edgelist slices have the same names and number of columns. The first two columns designate edges "from" and "to", and the third, if present, is the count (or more generally the weight) for that edge.
+#' @param selfedges If true, include self-edges in converted adjacency matrix. If false, diagonal of adjaceny matrix is zero.
 #' @param as.array If true, return an N x N x Time array instead of a list of adjacency matrices.
 #' @param directed Are the edges in the edgelist.time directed?
 #'
@@ -48,19 +49,19 @@ edgelist_to_adj <- function(edgelist.time, selfedges = TRUE, as.array = TRUE, di
   
 }
 
-#' convert N x N x T edgelist array to length T list of edges at each time period. (Handle NA?)
-#' 
-#' Note tdsbm methods allow/include selfedges.
+#' Convert representation of time-sliced network as N x N x T array to a length-T list of edglists for each time period. (Handle NA?)
+#' Resulting edgelists have three columns, "from", "to", and "count" (which is more generally the edge weight).
 #' @param A is a (time) series of network data represented as a N x N x Time array (each slice represented as an adjacency matrix).
 #' @param directed Are the edges in the edgelist directed?
-adj_to_edgelist <- function(A, directed = FALSE, selfEdge = TRUE) {
+#' @param selfedges If true, include self-edges in output edgelists. If false, remove. Note tdsbm methods allow/include selfedges.
+adj_to_edgelist <- function(A, directed = FALSE, selfedges = TRUE) {
   discrete_edge_list = apply(A, 3, function(x) {
     N = dim(A)[1]
     indices = expand.grid(1:N,1:N)
     edge_list = data.frame(cbind(indices, as.vector(x)))
     names(edge_list) = c("from", "to", "count")
     if (!directed) { edge_list = edge_list[edge_list$from <= edge_list$to,] }
-    if (!selfEdge) { edge_list = edge_list[edge_list$from != edge_list$to,] }
+    if (!selfedges) { edge_list = edge_list[edge_list$from != edge_list$to,] }
     # remove zeros for efficiency
     edge_list = edge_list[edge_list$count>0, ]
     return(edge_list)

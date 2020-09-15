@@ -2,7 +2,7 @@
 #
 #' Estimate parameters of a static SBM by Kernighan-Lin algorithm. Allows for directed networks and degree correction.
 #
-#' @param edgelist Network in edgelist format. The first two columns designate edges "from" and "to", and the third, if present, is the weight/count for each edge.
+#' @param edgelist Network in edgelist format. The first two columns designate edges "from" and "to", and the third, if present, is the count for each edge.
 #' @param maxComms maximum number of communities (blocks) represented in the network
 #' @param degreeCorrect whether to apply degree correction.:
 #' #' \itemize{

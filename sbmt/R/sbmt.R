@@ -15,7 +15,7 @@
 #' Note that although the motivation for this function and package is analyzing time-sliced networks, it can handle multilayer networks more generally as long as the primary input is a list of networks in edgelist format. (Slice parameters are independent given block membership.) 
 #
 #' @param edgelist.time A (time) series of networks represented as a list of edgelists. 
-#' Assumes all edgelist slices have the same names and number of columns. The first two columns designate edges "from" and "to", and the third, if present, is the weight/count for each edge.
+#' Assumes all edgelist slices have the same names and number of columns. The first two columns designate edges "from" and "to", and the third, if present, is the count for each edge.
 #' @param klPerNetwork this is the number of KL runs on a network
 #' @param maxComms maximum number of communities (blocks) represented in the network
 #' @param degreeCorrect whether to apply degree correction:
