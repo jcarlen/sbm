@@ -15,4 +15,4 @@ Imports: Rcpp (>= 0.11.0)
 Suggests: testthat (>= 1.0)
 LinkingTo: Rcpp
 Others: 
-RoxygenNote: 6.1.1
+RoxygenNote: 7.1.1

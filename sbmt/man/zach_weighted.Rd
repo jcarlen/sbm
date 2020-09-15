@@ -4,13 +4,15 @@
 \name{zach_weighted}
 \alias{zach_weighted}
 \title{An (arbitrarily) weighted version of the Zachary's Karate Club network used for testing.}
-\format{A data frame with 78 rows and 3 variables:
+\format{
+A data frame with 78 rows and 3 variables:
 \describe{
   \item{X1}{first node involved in an edge}
   \item{X2}{second node involved in an edge}
   \item{count}{weight of the edge}
   ...
-}}
+}
+}
 \source{
 Krivitsky P (2019). _ergm.count: Fit, Simulate and Diagnose
 Exponential-Family Models for Networks with Count Edges_. The Statnet

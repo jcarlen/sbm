@@ -4,9 +4,16 @@
 \alias{sbmt}
 \title{Estimate parameters of the TDD-SBM (time-dependent discrete stochastic block model) by Kernighan-Lin algorithm.}
 \usage{
-sbmt(edgelist.time, maxComms = 2, degreeCorrect = 0, directed = F,
-  klPerNetwork = 50, tolerance = 1e-04, seed = NULL,
-  seedComms = NULL)
+sbmt(
+  edgelist.time,
+  maxComms = 2,
+  degreeCorrect = 0,
+  directed = F,
+  klPerNetwork = 50,
+  tolerance = 1e-04,
+  seed = NULL,
+  seedComms = NULL
+)
 }
 \arguments{
 \item{edgelist.time}{Time-sliced network to model, formatted as a list of networks in edgelist format}
@@ -34,7 +41,7 @@ sbmt(edgelist.time, maxComms = 2, degreeCorrect = 0, directed = F,
 \value{
 FoundComms A vector of node labels with estimated block assignments.
 
-EdgeMatrix time-specific block to block edges corresponding to FoundComms
+EdgeMatrix time-specific block-to-block edges corresponding to FoundComms
 
 HighestScore Highest score found by algorithm runs
 

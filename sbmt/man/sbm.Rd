@@ -4,9 +4,16 @@
 \alias{sbm}
 \title{Estimate parameters of a static SBM by Kernighan-Lin algorithm. Allows for directed networks and degree correction.}
 \usage{
-sbm(edgelist, maxComms = 2, degreeCorrect = F, directed = FALSE,
-  klPerNetwork = 50, tolerance = 1e-04, seed = NULL,
-  seedComms = NULL)
+sbm(
+  edgelist,
+  maxComms = 2,
+  degreeCorrect = F,
+  directed = FALSE,
+  klPerNetwork = 50,
+  tolerance = 1e-04,
+  seed = NULL,
+  seedComms = NULL
+)
 }
 \arguments{
 \item{edgelist}{Network to model in edgelist format}

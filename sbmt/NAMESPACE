@@ -3,5 +3,8 @@ useDynLib(sbmt)
 exportPattern("^[[:alpha:]]+")
 
 importFrom(Rcpp, evalCpp)
-
 importFrom("stats", "aggregate")
+importFrom("graphics", "par")
+importFrom("graphics", "points")
+
+S3method(plot,sbmt)

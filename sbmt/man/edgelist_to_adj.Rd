@@ -4,8 +4,7 @@
 \alias{edgelist_to_adj}
 \title{Convert time-sliced edgelist to time-sliced adjacency matrix (helper for likelihood functions)}
 \usage{
-edgelist_to_adj(edgelist, selfedges = TRUE, as.array = TRUE,
-  directed = TRUE)
+edgelist_to_adj(edgelist, selfedges = TRUE, as.array = TRUE, directed = TRUE)
 }
 \arguments{
 \item{edgelist}{A (time) series of network data represented as a list of edgelists. Assumes all edgelist slices have same names and number of columns, first two columns designate "from" and "to" for edges and third, if present, is count.}

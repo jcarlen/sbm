@@ -4,11 +4,13 @@
 \name{zach}
 \alias{zach}
 \title{Zachary's Karate Club network (used for testing).}
-\format{A data frame with 78 rows and 2 variables:
+\format{
+A data frame with 78 rows and 2 variables:
 \describe{
   \item{X1}{first node involved in an edge}
   \item{X2}{second node involved in an edge}
-}}
+}
+}
 \source{
 Krivitsky P (2019). _ergm.count: Fit, Simulate and Diagnose
 Exponential-Family Models for Networks with Count Edges_. The Statnet

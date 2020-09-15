@@ -1,6 +1,8 @@
 # TO DO
 # add generate_multilayer_array and dgelist as function to package 
 # to enable simulation and complement edgelist_to_adj
+# Note degree correcton can also lead to a more parsimonious and interpretable model representation where there is degree heterogeneity
+# because a unique class is not needed for each degree-activity leve
 # ---------------------------------------------------------------------------------------------------------------
 # new functions ----
 
@@ -31,6 +33,8 @@ adj_to_edgelist <- function(edge_array, directed = FALSE, selfEdge = TRUE) {
     names(edge_list) = c("from", "to", "count")
     if (!directed) { edge_list = edge_list[edge_list$from <= edge_list$to,] }
     if (!selfEdge) { edge_list = edge_list[edge_list$from != edge_list$to,] }
+    # remove zeros for efficiency
+    edge_list = edge_list[edge_list$count>0, ]
     return(edge_list)
   })
   return(discrete_edge_list)
@@ -50,8 +54,18 @@ a = 10
 b = 5
 ymax =  max(2*a, 2*b)
 
+#roles
+roles_discrete = rep(1:n_roles, length.out = N)
+
 # for degree corrected
 dc_factor = seq(0,1,length.out = n_roles+1)[-1]
+dc_factors = rep(dc_factor, each = round(N/n_roles))[1:N]
+#apply sum to 1 constraint
+f.tmp = function(v) {v/sum(v)}
+dc_factors = as.vector(aggregate(dc_factors ~ roles_discrete, FUN = "f.tmp")[,-1])
+# check 
+identical(aggregate(dc_factors ~ roles_discrete, FUN = "sum")[,2], rep(1, n_roles))
+  
 # curves ----
 par(mfrow = c(n_roles, n_roles))
 curve(b*sin(x*pi/Time) + b, 0, Time, ylim = c(0, ymax))
@@ -76,7 +90,6 @@ omega = array(rbind(omega_11, omega_21, omega_12, omega_22), dim = c(n_roles, n_
 # simulate roles and edges ----      
 # no degree correction case ----
 N_sim = 10
-roles_discrete = rep(1:n_roles, length.out = N)
 degree_correct = 0
 role_results = 1:N_sim
 
@@ -118,7 +131,6 @@ apply(sapply(discrete_sbmt$EdgeMatrix, as.vector), 1, plot, type = "l")
 
 set.seed(1)
 dc_role_results = 1:N_sim
-dc_factors = rep(dc_factor, each = round(N/n_roles))[1:N]
 
 # - sbmt ----
 
@@ -202,7 +214,10 @@ apply(exp(dc_discrete_ppsbm_init[[selected_Q]]$logintensities.ql), 1, plot, type
 apply(dc_discrete_ppsbm_init[[selected_Q]]$tau, 2, which.max)
 table(apply(dc_discrete_ppsbm_init[[selected_Q]]$tau, 2, which.max), roles_discrete)
 
+# ---------------------------------------------------------------------------------------------------------------
 # add a mixed-membership example? ----
 
-# london bike share
+
+# ---------------------------------------------------------------------------------------------------------------
+# london bike share (see London_cycles.R)
 

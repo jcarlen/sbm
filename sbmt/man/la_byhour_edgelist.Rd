@@ -4,14 +4,16 @@
 \name{la_byhour_edgelist}
 \alias{la_byhour_edgelist}
 \title{A}
-\format{A length-24 list of data frames for each our of the data, 
+\format{
+A length-24 list of data frames for each our of the data, 
 #' e.g. the first item in the list describes trips originating between midnight and 1am.
 #' Each data frame has three columns
 \describe{
   \item{start_station_id}{starting station of trip by system ID}
   \item{end_station_id}{ending station of trip by system IDe}
   \item{count}{Number of trips from start_station_id to end_station_id starting in the given hour}
-}}
+}
+}
 \source{
 Metro Bike Share Trip Data
  LA Metro, 2017 <https://bikeshare.metro.net/about/data>
