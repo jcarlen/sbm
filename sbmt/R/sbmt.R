@@ -29,7 +29,7 @@
 #'@param seedComms user-supplied starting values for KL runs. They will be converted to integer levels numbered starting at 0
 #
 #'@return FoundComms A vector of node labels with estimated block assignments.
-#'@return EdgeMatrix time-specific block to block edges corresponding to FoundComms
+#'@return EdgeMatrix time-specific block-to-block edges corresponding to FoundComms
 #'@return HighestScore Highest score found by algorithm runs
 #'@return llik unnormalized log-likelihood of result as calculated by tdd_sbm_llik
 #'@return directed Whether input network was considered directed
@@ -148,6 +148,9 @@ sbmt <- function(edgelist.time, maxComms = 2, degreeCorrect = 0, directed = F,
     Results$klPerNetwork = klPerNetwork
     Results$tolerance = tolerance
     Results$init = list(seed = seed, seedComms = seedComms)
+    
+    # set method for plot
+    class(Results) <- "sbmt"
     
     Results
 }
