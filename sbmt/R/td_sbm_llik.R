@@ -11,11 +11,11 @@
 #
 #' @param edgelist.time A (time) series of networks represented as a list of edgelists. 
 #' Assumes all edgelist slices have the same names and number of columns. The first two columns designate edges "from" and "to", and the third, if present, is the count (or more generally the weight) for that edge.
-#' @param selfedges If true, include self-edges in converted adjacency matrix. If false, diagonal of adjaceny matrix is zero.
+#' @param selfEdges If true, include self-edges in converted adjacency matrix. If false, diagonal of adjaceny matrix is zero.
 #' @param as.array If true, return an N x N x Time array instead of a list of adjacency matrices.
 #' @param directed Are the edges in the edgelist.time directed?
 #'
-edgelist_to_adj <- function(edgelist.time, selfedges = TRUE, as.array = TRUE, directed = TRUE) {
+edgelist_to_adj <- function(edgelist.time, selfEdges = TRUE, as.array = TRUE, directed = TRUE) {
   Time = length(edgelist.time)
   E = do.call("rbind", edgelist.time)
   S = unique(c(as.character(E[,1]), as.character(E[,2])))
@@ -32,7 +32,7 @@ edgelist_to_adj <- function(edgelist.time, selfedges = TRUE, as.array = TRUE, di
     adjlist.t[ cbind(   Nodes[as.character(edgelist.time[[t]][,1])], 
                         Nodes[as.character(edgelist.time[[t]][,2])] ) ] = edgelist.time[[t]][,3]
     # remove self-edges?
-    if (selfedges == FALSE) {diag(adjlist.t) = 0}
+    if (selfEdges == FALSE) {diag(adjlist.t) = 0}
     if (directed == FALSE) {
       adjlist.t = adjlist.t+t(adjlist.t)
       diag(adjlist.t) = diag(adjlist.t)/2
@@ -53,17 +53,17 @@ edgelist_to_adj <- function(edgelist.time, selfedges = TRUE, as.array = TRUE, di
 #' Resulting edgelists have three columns, "from", "to", and "count" (which is more generally the edge weight).
 #' @param A is a (time) series of network data represented as a N x N x Time array (each slice represented as an adjacency matrix).
 #' @param directed Are the edges in the edgelist directed?
-#' @param selfedges If true, include self-edges in output edgelists. If false, remove. Note tdsbm methods allow/include selfedges.
-adj_to_edgelist <- function(A, directed = FALSE, selfedges = TRUE) {
+#' @param selfEdges If true, include self-edges in output edgelists. If false, remove. Note tdsbm methods allow/include selfedges.
+#' @param remove_zeros Probably want to remove zeros for efficiency, but maybe not if edgelist-length consistency over time is desired
+adj_to_edgelist <- function(A, directed = FALSE, selfEdges = TRUE, remove_zeros = TRUE) {
   discrete_edge_list = apply(A, 3, function(x) {
     N = dim(A)[1]
     indices = expand.grid(1:N,1:N)
     edge_list = data.frame(cbind(indices, as.vector(x)))
     names(edge_list) = c("from", "to", "count")
     if (!directed) { edge_list = edge_list[edge_list$from <= edge_list$to,] }
-    if (!selfedges) { edge_list = edge_list[edge_list$from != edge_list$to,] }
-    # remove zeros for efficiency
-    edge_list = edge_list[edge_list$count>0, ]
+    if (!selfEdges) { edge_list = edge_list[edge_list$from != edge_list$to,] }
+    if (remove_zeros) {edge_list = edge_list[edge_list$count>0, ]}
     return(edge_list)
   })
   return(discrete_edge_list)

@@ -5,7 +5,7 @@
 \title{Convert representation of time-sliced network as N x N x T array to a length-T list of edglists for each time period. (Handle NA?)
 Resulting edgelists have three columns, "from", "to", and "count" (which is more generally the edge weight).}
 \usage{
-adj_to_edgelist(A, directed = FALSE, selfedges = TRUE)
+adj_to_edgelist(A, directed = FALSE, selfedges = TRUE, remove_zeros = TRUE)
 }
 \arguments{
 \item{A}{is a (time) series of network data represented as a N x N x Time array (each slice represented as an adjacency matrix).}
@@ -13,6 +13,8 @@ adj_to_edgelist(A, directed = FALSE, selfedges = TRUE)
 \item{directed}{Are the edges in the edgelist directed?}
 
 \item{selfedges}{If true, include self-edges in output edgelists. If false, remove. Note tdsbm methods allow/include selfedges.}
+
+\item{remove_zeros}{Probably want to remove zeros for efficiency, but maybe not if edgelist-length consistency over time is desired}
 }
 \description{
 Convert representation of time-sliced network as N x N x T array to a length-T list of edglists for each time period. (Handle NA?)

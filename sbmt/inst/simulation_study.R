@@ -6,27 +6,38 @@
 # ---------------------------------------------------------------------------------------------------------------
 # new functions ----
 
-# add this as a simulation function to package?
-# defaults to no degree correction (all have multilplier 1)
-generate_multilayer_array <- function(N, Time, roles, omega, dc_factor = rep(1, N)) {
-  discrete_edge_array = array(0, dim = c(N, N, Time))
+# generate N x N x T array (time-sliced adjacency matrices) based on TDD-SBM (type == "discrete) or TDMM-SBM (type = "mixed") model
+# defaults to no degree correction (all dc_factors == 1)
+# for type "discrete" roles are a length-N vector of block assignments. For type "mixed" roles are a G x N matrix of assignment weights (and dc_factor is ignored)
+# (add this as a simulation function to abmt package?)
+generate_multilayer_array <- function(N, Time, roles, omega, dc_factors = rep(1, N), type = "discrete") {
+  # checks
+  if (type == "discrete") {
+   if (! identical(aggregate(dc_factors ~ roles, FUN = "sum")[,2], rep(1, length(unique(roles))))) {
+     warning("degree correction factors not normalized to sum 1 by group")
+   }
+  }
+  
+  edge_array = array(0, dim = c(N, N, Time))
   for (i in 1:N) {
     role_i = roles[i]
     for (j in 1:N) {
       role_j = roles[j]
       for (time in 1:Time) {
-        ijt = rpois(dc_factor[i]*dc_factor[j]*omega[role_i, role_j, time], n= 1)
-        discrete_edge_array[i, j, time] = ijt
-      }
+          if (type == "discrete") { ijt = rpois(dc_factors[i]*dc_factors[j]*omega[role_i, role_j, time], n= 1) }
+          if (type == "mixed") { ijt = rpois(roles[, i]%*% omega[, , time] %*% t(roles[, j]), n= 1) }
+          edge_array[i, j, time] = ijt
+      } 
     }
   }
-  return(discrete_edge_array)
+  return(edge_array)
 }
 
-# ---------------------------------------------------------------------------------------------------------------
 # libraries ----
 library(sbmt)
+library(fossil) #for adj rand index
 
+# ---------------------------------------------------------------------------------------------------------------
 # parameters  ----
 
 n_roles = 2
@@ -40,15 +51,6 @@ ymax =  max(2*a, 2*b)
 #roles
 roles_discrete = rep(1:n_roles, length.out = N)
 
-# for degree corrected
-dc_factor = seq(0,1,length.out = n_roles+1)[-1]
-dc_factors = rep(dc_factor, each = round(N/n_roles))[1:N]
-#apply sum to 1 constraint
-f.tmp = function(v) {v/sum(v)}
-dc_factors = as.vector(aggregate(dc_factors ~ roles_discrete, FUN = "f.tmp")[,-1])
-# check 
-identical(aggregate(dc_factors ~ roles_discrete, FUN = "sum")[,2], rep(1, n_roles))
-  
 # curves ----
 par(mfrow = c(n_roles, n_roles))
 curve(b*sin(x*pi/Time) + b, 0, Time, ylim = c(0, ymax))
@@ -57,6 +59,7 @@ curve(-a*sin(x*2*pi/Time)+a, 0, Time, ylim = c(0, ymax))
 curve(b*sin(x*pi/Time)+ b, 0, Time, ylim = c(0, ymax))
 
 # show overlapping
+par(mfrow = c(1,1))
 curve(a*sin(x*2*pi/Time)+a, 0, Time, ylim = c(0, ymax))
 curve(-a*sin(x*2*pi/Time)+a, 0, Time, col = "red", add = TRUE)
 curve(b*sin(x*pi/Time) + b, 0, Time, col = "blue", add = TRUE)
@@ -69,8 +72,21 @@ omega_21 = -a*sin(x*2*pi/Time)+a
 omega_22 = omega_11
 
 omega = array(rbind(omega_11, omega_21, omega_12, omega_22), dim = c(n_roles, n_roles, Time)) #left most index moves fastest
-    
-# simulate roles and edges ----      
+
+# for degree corrected ----
+
+dc_factor = seq(0,1,length.out = n_roles+1)[-1]
+dc_factors = rep(dc_factor, each = round(N/n_roles))[1:N]
+#apply sum to 1 constraint
+f.tmp = function(v) {v/sum(v)}
+dc_factors = as.vector(aggregate(dc_factors ~ roles_discrete, FUN = "f.tmp")[,-1])
+# check 
+identical(aggregate(dc_factors ~ roles_discrete, FUN = "sum")[,2], rep(1, n_roles))
+  
+# adjust omega after apply sum 1 constraint to degree-correction factors
+dc_omega = omega*array(table(roles_discrete) %*% t(table(roles_discrete)), dim = c(2,2,16))
+
+# ---------------------------------------------------------------------------------------------------------------
 # no degree correction case ----
 N_sim = 10
 degree_correct = 0
@@ -89,49 +105,52 @@ role_results = 1:N_sim
   # image(discrete_edge_array[(1:N)[order((1:N)%%n_roles)], (1:N)[order((1:N)%%n_roles)], 13])
   # image(discrete_edge_array[(1:N)[order((1:N)%%n_roles)], (1:N)[order((1:N)%%n_roles)],19])
 
-# - sbmt ----
+# - fit sbmt ----
 
 set.seed(1)
-role_results = 1:N_sim
+sbmt_ari = 1:N_sim
 
 for (s in 1:N_sim) {
   
   discrete_edge_array = generate_multilayer_array(N, Time, roles_discrete, omega)
-  discrete_edge_list = adj_to_edgelist(discrete_edge_array, directed = TRUE, selfEdge = TRUE)
-  discrete_sbmt = sbmt(discrete_edge_list, maxComms = 2, degreeCorrect = 0, directed = TRUE, klPerNetwork = 3)
-  role_results[s] = N - sum(diag(table(discrete_sbmt$FoundComms[order(as.numeric(names(discrete_sbmt$FoundComms)))], roles_discrete)))
+  discrete_edge_list = adj_to_edgelist(discrete_edge_array, directed = TRUE, selfedges = TRUE)
+  discrete_sbmt = sbmt(discrete_edge_list, maxComms = 2, degreeCorrect = 0, directed = TRUE, klPerNetwork = 10)
+  plot(discrete_sbmt)
+  sbmt_ari[s] = adj.rand.index(discrete_sbmt$FoundComms[order(as.numeric(names(discrete_sbmt$FoundComms)))], roles_discrete)
 }
 
-#   + results ----
+# - results ----
 
-role_results
+# role detection
+sbmt_ari
 
-#omega results
-par(mfrow = c(n_roles, n_roles))
-apply(sapply(discrete_sbmt$EdgeMatrix, as.vector), 1, plot, type = "l")
+#omega
 
+
+# ---------------------------------------------------------------------------------------------------------------
 # degree correction case  ----
 
 set.seed(1)
-dc_role_results = 1:N_sim
+dc_ari = 1:N_sim #evaluate with adjusted rand index
 
-# - sbmt ----
+# - fit sbmt ----
 
 for (s in 1:N_sim) {
   
-  dc_discrete_edge_array = generate_multilayer_array(N, Time, roles_discrete, omega, dc_factor = dc_factors)
-  dc_discrete_edge_list = adj_to_edgelist(dc_discrete_edge_array, directed = TRUE, selfEdge = TRUE)
-  dc_discrete_sbmt = sbmt(dc_discrete_edge_list, maxComms = 2, degreeCorrect = 3, directed = TRUE, klPerNetwork = 3)
-  dc_role_results[s] = N - sum(diag(table(dc_discrete_sbmt$FoundComms[order(as.numeric(names(dc_discrete_sbmt$FoundComms)))], roles_discrete)))
+  dc_discrete_edge_array = generate_multilayer_array(N, Time, roles_discrete, dc_omega, dc_factors)
+  dc_discrete_edge_list = adj_to_edgelist(dc_discrete_edge_array, directed = TRUE, selfedges = TRUE)
+  dc_discrete_sbmt = sbmt(dc_discrete_edge_list, maxComms = 2, degreeCorrect = 3, directed = TRUE, klPerNetwork = 10)
+  plot(dc_discrete_sbmt)
+  dc_ari[s] = adj.rand.index(dc_discrete_sbmt$FoundComms[order(as.numeric(names(dc_discrete_sbmt$FoundComms)))], roles_discrete)
 }
 
-#   + results ----
+# - results ----
 
-dc_role_results
+# role detection
+dc_ari
 
-#omega results
-par(mfrow = c(n_roles, n_roles))
-apply(sapply(dc_discrete_sbmt$EdgeMatrix, as.vector), 1, plot, type = "l")
+# omega 
+plot(dc_discrete_sbmt)
 
 # ---------------------------------------------------------------------------------------------------------------
 # ppsbm ----
@@ -140,7 +159,7 @@ library(ppsbm)
 # no degree correction case. their model works as expected ----
 # Use the "hist" method because agrees more closely with out discrete time slices and requires little data manipulation
 
-Nijk = sapply(adj_to_edgelist(discrete_edge_array, directed = TRUE, selfEdge = FALSE), "[[", 3); dim(Nijk)
+Nijk = sapply(adj_to_edgelist(discrete_edge_array, directed = TRUE, selfedges = FALSE, remove_zeros = TRUE), "[[", 3); dim(Nijk)
 discrete_ppsbm = mainVEM(list(Nijk=Nijk,Time=Time), N, Qmin = 1, Qmax = 4, directed=TRUE, 
                          method='hist', d_part=0, n_perturb=0, n_random=0)
 
@@ -198,9 +217,7 @@ apply(dc_discrete_ppsbm_init[[selected_Q]]$tau, 2, which.max)
 table(apply(dc_discrete_ppsbm_init[[selected_Q]]$tau, 2, which.max), roles_discrete)
 
 # ---------------------------------------------------------------------------------------------------------------
-# add a mixed-membership example? ----
+# mixed-membership example ----
 
-
-# ---------------------------------------------------------------------------------------------------------------
-# london bike share (see London_cycles.R)
+roles_mixed = matrix(c(rep(.5, 2*N/3), rep(c(0,1), N/3), rep(c(1,0), N/3)), nrow = n_roles, ncol = N)
 
