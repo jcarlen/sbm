@@ -3,7 +3,7 @@
 # Note degree correcton can also lead to a more parsimonious and interpretable model representation where there is degree heterogeneity
 # because a unique class is not needed for each degree-activity leve
 # ---------------------------------------------------------------------------------------------------------------
-# new functions ----
+# new functions (generate_multilayer_array) ----
 
 # generate N x N x T array (time-sliced adjacency matrices) based on TDD-SBM (type == "discrete) or TDMM-SBM (type = "mixed") model
 # defaults to no degree correction (all dc_factors == 1)
@@ -24,13 +24,14 @@ generate_multilayer_array <- function(N, Time, roles, omega, dc_factors = rep(1,
       role_j = roles[j]
       for (time in 1:Time) {
           if (type == "discrete") { ijt = rpois(dc_factors[i]*dc_factors[j]*omega[role_i, role_j, time], n= 1) }
-          if (type == "mixed") { ijt = rpois(roles[, i]%*% omega[, , time] %*% t(roles[, j]), n= 1) }
+          if (type == "mixed") { ijt = rpois(t(roles[, i])%*% omega[, , time] %*% roles[, j], n= 1) }
           edge_array[i, j, time] = ijt
       } 
     }
   }
   return(edge_array)
 }
+
 
 # libraries ----
 # devtools::install_github("jcarlen/sbm", subdir = "sbmt") 
@@ -86,7 +87,9 @@ dc_factors = as.vector(aggregate(dc_factors ~ roles_discrete, FUN = "f.tmp")[,-1
 identical(aggregate(dc_factors ~ roles_discrete, FUN = "sum")[,2], rep(1, n_roles))
   
 # adjust omega after apply sum 1 constraint to degree-correction factors
-dc_omega = omega*array(table(roles_discrete) %*% t(table(roles_discrete)), dim = c(2,2,16))
+# (to account for normalization) is expected total weight from r to s instead of expected edge weight from single edge from block r to block s, 
+# will use for mixed omega also
+block_omega = omega*array(table(roles_discrete) %*% t(table(roles_discrete)), dim = c(2,2,16))
 
 # ---------------------------------------------------------------------------------------------------------------
 # no degree correction case ----
@@ -114,9 +117,9 @@ sbmt_ari = 1:N_sim
 
 for (s in 1:N_sim) {
   
-  discrete_edge_array = generate_multilayer_array(N, Time, roles_discrete, omega)
+  discrete_edge_array = generate_multilayer_array(N, Time, roles_discrete, omega, type = "discrete")
   discrete_edge_list = adj_to_edgelist(discrete_edge_array, directed = TRUE, selfEdges = TRUE)
-  discrete_sbmt = sbmt(discrete_edge_list, maxComms = 2, degreeCorrect = 0, directed = TRUE, klPerNetwork = 10)
+  discrete_sbmt = sbmt(discrete_edge_list, maxComms = n_roles, degreeCorrect = 0, directed = TRUE, klPerNetwork = 10)
   plot(discrete_sbmt)
   sbmt_ari[s] = adj.rand.index(discrete_sbmt$FoundComms[order(as.numeric(names(discrete_sbmt$FoundComms)))], roles_discrete)
 }
@@ -140,9 +143,9 @@ dc_ari = 1:N_sim #evaluate with adjusted rand index
 
 for (s in 1:N_sim) {
   
-  dc_discrete_edge_array = generate_multilayer_array(N, Time, roles_discrete, dc_omega, dc_factors)
+  dc_discrete_edge_array = generate_multilayer_array(N, Time, roles_discrete, block_omega, dc_factors, type = "discrete")
   dc_discrete_edge_list = adj_to_edgelist(dc_discrete_edge_array, directed = TRUE, selfEdges = TRUE)
-  dc_discrete_sbmt = sbmt(dc_discrete_edge_list, maxComms = 2, degreeCorrect = 3, directed = TRUE, klPerNetwork = 10)
+  dc_discrete_sbmt = sbmt(dc_discrete_edge_list, maxComms = n_roles, degreeCorrect = 3, directed = TRUE, klPerNetwork = 10)
   # to compare likelihood
   # dc_discrete_sbmt2 = sbmt(dc_discrete_edge_list, maxComms = n_roles*2, degreeCorrect = 3, directed = TRUE, klPerNetwork = 10)
   # diff in llik vs. diff in param
@@ -223,5 +226,26 @@ apply(exp(dc_discrete_ppsbm[[n_roles]]$logintensities.ql), 1, plot, type = "l", 
 # ---------------------------------------------------------------------------------------------------------------
 # mixed-membership example ----
 
-roles_mixed = matrix(c(rep(.5, 2*N/3), rep(c(0,1), N/3), rep(c(1,0), N/3)), nrow = n_roles, ncol = N)
+roles_mixed = matrix(c(rep(.5, 2*N/3), rep(c(0,1), N/3), rep(c(1,0), N/3)), nrow = n_roles, ncol = N); roles_mixed
+
+#apply sum to 1 constraint to mixed roles
+roles_mixed = roles_mixed/rowSums(roles_mixed)
+
+for (s in 1:N_sim) {
+  
+  mixed_edge_array = generate_multilayer_array(N, Time, roles_mixed, block_omega, type = "mixed")
+  mixed_edge_list = adj_to_edgelist(mixed_edge_array, directed = TRUE, selfEdges = TRUE)
+  # run mixed
+  
+  # to compare likelihood
+  # dc_discrete_sbmt2 = sbmt(dc_discrete_edge_list, maxComms = n_roles*2, degreeCorrect = 3, directed = TRUE, klPerNetwork = 10)
+  # diff in llik vs. diff in param
+  # (dc_discrete_sbmt2$llik - dc_discrete_sbmt$llik)/(tdd_n_param(N, n_roles*2, Time) - tdd_n_param(N, n_roles, Time)) 
+  plot(dc_discrete_sbmt)
+  dc_ari[s] = adj.rand.index(dc_discrete_sbmt$FoundComms[order(as.numeric(names(dc_discrete_sbmt$FoundComms)))], roles_discrete)
+}
+
+
+
+
 
