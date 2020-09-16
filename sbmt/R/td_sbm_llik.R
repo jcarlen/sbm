@@ -3,6 +3,7 @@
 # Although sbmt returns a "highest scores" it's an un-normalized llik that's not comparable to mixed model results
 # Jane Carlen
 # TO DO: add unirected options for these functions
+#        add tests for adj_to_edgelist in test_likelihood (at least for now)
 
 # ------------------------------- Helpers ----------------------------------------------
 
