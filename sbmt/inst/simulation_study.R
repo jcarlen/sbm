@@ -75,9 +75,8 @@ omega = array(rbind(omega_11, omega_21, omega_12, omega_22), dim = c(n_roles, n_
 
 # for degree corrected ----
 
-
 dc_factor = seq(0,1,length.out = n_roles+1)[-1]
-#dc_factor = seq(0,1,length.out = n_roles+2)[-1]
+#dc_factor = seq(0,1,length.out = n_roles+5)[-1]
 
 dc_factors = rep(dc_factor, each = round(N/n_roles))[1:N]
 #apply sum to 1 constraint
@@ -144,9 +143,14 @@ for (s in 1:N_sim) {
   dc_discrete_edge_array = generate_multilayer_array(N, Time, roles_discrete, dc_omega, dc_factors)
   dc_discrete_edge_list = adj_to_edgelist(dc_discrete_edge_array, directed = TRUE, selfEdges = TRUE)
   dc_discrete_sbmt = sbmt(dc_discrete_edge_list, maxComms = 2, degreeCorrect = 3, directed = TRUE, klPerNetwork = 10)
+  # to compare likelihood
+  # dc_discrete_sbmt2 = sbmt(dc_discrete_edge_list, maxComms = n_roles*2, degreeCorrect = 3, directed = TRUE, klPerNetwork = 10)
+  # diff in llik vs. diff in param
+  # (dc_discrete_sbmt2$llik - dc_discrete_sbmt$llik)/(tdd_n_param(N, n_roles*2, Time) - tdd_n_param(N, n_roles, Time)) 
   plot(dc_discrete_sbmt)
   dc_ari[s] = adj.rand.index(dc_discrete_sbmt$FoundComms[order(as.numeric(names(dc_discrete_sbmt$FoundComms)))], roles_discrete)
 }
+
 
 # - results ----
 
@@ -189,12 +193,12 @@ apply(exp(discrete_ppsbm[[selected_Q]]$logintensities.ql), 1, plot, type = "l")
 # - fit ppsbm ----
 
 dc_Nijk = sapply(adj_to_edgelist(dc_discrete_edge_array, directed = TRUE, selfEdges = FALSE, removeZeros = FALSE), "[[", 3); dim(dc_Nijk)
-dc_discrete_ppsbm = mainVEM(list(Nijk=dc_Nijk,Time=Time), N, Qmin = 1, Qmax = 4, directed=TRUE, 
+dc_discrete_ppsbm = mainVEM(list(Nijk=dc_Nijk,Time=Time), N, Qmin = 1, Qmax = 6, directed=TRUE, 
                             method='hist', d_part=5, n_perturb=10, n_random=0)
 # - results ----
 
 # number of blocks selected
-selected_Q = modelSelection_Q(list(Nijk=dc_Nijk,Time=Time), N, Qmin = 1, Qmax = 4, directed = TRUE, sparse = FALSE, dc_discrete_ppsbm)$Qbest
+selected_Q = modelSelection_Q(list(Nijk=dc_Nijk,Time=Time), N, Qmin = 1, Qmax = 6, directed = TRUE, sparse = FALSE, dc_discrete_ppsbm)$Qbest
 selected_Q
 selected_Q == n_roles
 
