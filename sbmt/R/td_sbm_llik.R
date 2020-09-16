@@ -15,7 +15,7 @@
 #' @param selfEdges If true, include self-edges in converted adjacency matrix. If false, diagonal of adjaceny matrix is zero.
 #' @param as.array If true, return an N x N x Time array instead of a list of adjacency matrices.
 #' @param directed Are the edges in the edgelist.time directed?
-#'
+
 edgelist_to_adj <- function(edgelist.time, selfEdges = TRUE, as.array = TRUE, directed = TRUE) {
   Time = length(edgelist.time)
   E = do.call("rbind", edgelist.time)
@@ -56,6 +56,7 @@ edgelist_to_adj <- function(edgelist.time, selfEdges = TRUE, as.array = TRUE, di
 #' @param directed Are the edges in the edgelist directed?
 #' @param selfEdges If true, include self-edges in output edgelists. If false, remove. Note tdsbm methods allow/include selfedges.
 #' @param removeZeros Probably want to remove zeros for efficiency, but maybe not if edgelist-length consistency over time is desired
+
 adj_to_edgelist <- function(A, directed = FALSE, selfEdges = TRUE, removeZeros = TRUE) {
   discrete_edge_list = apply(A, 3, function(x) {
     N = dim(A)[1]
@@ -76,7 +77,7 @@ adj_to_edgelist <- function(A, directed = FALSE, selfEdges = TRUE, removeZeros =
 #' @param mu mu is a N x N matrix of edge expected values at this time slice
 #' @param directed Are the edges in the edgelist directed?
 #' @param selfEdges is whether to sum over self-edge indices in the likelihood calculation, or exclude them
-#' 
+
 td_sbm_llik_t <- function(A_t, mu, directed = TRUE, selfEdges = TRUE) {
   if (!selfEdges) {
     diag(mu) = 1
@@ -99,6 +100,7 @@ td_sbm_llik_t <- function(A_t, mu, directed = TRUE, selfEdges = TRUE) {
 #' @param K number of blocks
 #' @param Time number of time slices
 #' @param directed Is the network directed?
+
 tdd_n_param <- function(N, K, Time, directed = TRUE) {
   ifelse(directed, 2*N - K + Time*K^2, 2*N - K + Time*(K*(K-1)/2))
 }
@@ -109,6 +111,7 @@ tdd_n_param <- function(N, K, Time, directed = TRUE) {
 #' @param K number of blocks
 #' @param Time number of time slices
 #' @param directed Is the network directed?
+
 tdmm_n_param <- function(N, K, Time, directed = TRUE) {
   ifelse(directed, K*N - K + Time*K^2, K*N - K + Time*(K*(K-1)/2))
 }
@@ -130,7 +133,7 @@ tdmm_n_param <- function(N, K, Time, directed = TRUE) {
 #' model1 = sbmt(la_byhour_edgelist,  degreeCorrect = 3, 
 #'   directed = TRUE, klPerNetwork = 2, maxComms = 3)
 #' tdd_sbm_llik(A, model1$FoundComms, model1$EdgeMatrix)
-#' 
+
 tdd_sbm_llik <- function(A, roles, omega, directed = TRUE, selfEdges = TRUE) {
   
   N = dim(A)[1]
@@ -171,7 +174,6 @@ tdd_sbm_llik <- function(A, roles, omega, directed = TRUE, selfEdges = TRUE) {
 #' data("la_byhour_edgelist", "la_mixed_roles_2", "la_mixed_omega_2")
 #' A = edgelist_to_adj(la_byhour_edgelist, as.array = TRUE)
 #' tdmm_sbm_llik(A, la_mixed_roles_2, la_mixed_omega_2)
-#' 
 
 tdmm_sbm_llik <- function(A, C, omega, directed = TRUE, selfEdges = TRUE) {
   
