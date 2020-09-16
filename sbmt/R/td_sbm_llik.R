@@ -54,8 +54,8 @@ edgelist_to_adj <- function(edgelist.time, selfEdges = TRUE, as.array = TRUE, di
 #' @param A is a (time) series of network data represented as a N x N x Time array (each slice represented as an adjacency matrix).
 #' @param directed Are the edges in the edgelist directed?
 #' @param selfEdges If true, include self-edges in output edgelists. If false, remove. Note tdsbm methods allow/include selfedges.
-#' @param remove_zeros Probably want to remove zeros for efficiency, but maybe not if edgelist-length consistency over time is desired
-adj_to_edgelist <- function(A, directed = FALSE, selfEdges = TRUE, remove_zeros = TRUE) {
+#' @param removeZeros Probably want to remove zeros for efficiency, but maybe not if edgelist-length consistency over time is desired
+adj_to_edgelist <- function(A, directed = FALSE, selfEdges = TRUE, removeZeros = TRUE) {
   discrete_edge_list = apply(A, 3, function(x) {
     N = dim(A)[1]
     indices = expand.grid(1:N,1:N)
@@ -63,7 +63,7 @@ adj_to_edgelist <- function(A, directed = FALSE, selfEdges = TRUE, remove_zeros 
     names(edge_list) = c("from", "to", "count")
     if (!directed) { edge_list = edge_list[edge_list$from <= edge_list$to,] }
     if (!selfEdges) { edge_list = edge_list[edge_list$from != edge_list$to,] }
-    if (remove_zeros) {edge_list = edge_list[edge_list$count>0, ]}
+    if (removeZeros) {edge_list = edge_list[edge_list$count>0, ]}
     return(edge_list)
   })
   return(discrete_edge_list)

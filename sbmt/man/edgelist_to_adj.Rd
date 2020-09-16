@@ -7,7 +7,7 @@ Used in pre-processing for likelihood functions.}
 \usage{
 edgelist_to_adj(
   edgelist.time,
-  selfedges = TRUE,
+  selfEdges = TRUE,
   as.array = TRUE,
   directed = TRUE
 )
@@ -16,7 +16,7 @@ edgelist_to_adj(
 \item{edgelist.time}{A (time) series of networks represented as a list of edgelists. 
 Assumes all edgelist slices have the same names and number of columns. The first two columns designate edges "from" and "to", and the third, if present, is the count (or more generally the weight) for that edge.}
 
-\item{selfedges}{If true, include self-edges in converted adjacency matrix. If false, diagonal of adjaceny matrix is zero.}
+\item{selfEdges}{If true, include self-edges in converted adjacency matrix. If false, diagonal of adjaceny matrix is zero.}
 
 \item{as.array}{If true, return an N x N x Time array instead of a list of adjacency matrices.}
 

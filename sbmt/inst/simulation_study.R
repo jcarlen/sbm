@@ -113,7 +113,7 @@ sbmt_ari = 1:N_sim
 for (s in 1:N_sim) {
   
   discrete_edge_array = generate_multilayer_array(N, Time, roles_discrete, omega)
-  discrete_edge_list = adj_to_edgelist(discrete_edge_array, directed = TRUE, selfedges = TRUE)
+  discrete_edge_list = adj_to_edgelist(discrete_edge_array, directed = TRUE, selfEdges = TRUE)
   discrete_sbmt = sbmt(discrete_edge_list, maxComms = 2, degreeCorrect = 0, directed = TRUE, klPerNetwork = 10)
   plot(discrete_sbmt)
   sbmt_ari[s] = adj.rand.index(discrete_sbmt$FoundComms[order(as.numeric(names(discrete_sbmt$FoundComms)))], roles_discrete)
@@ -138,7 +138,7 @@ dc_ari = 1:N_sim #evaluate with adjusted rand index
 for (s in 1:N_sim) {
   
   dc_discrete_edge_array = generate_multilayer_array(N, Time, roles_discrete, dc_omega, dc_factors)
-  dc_discrete_edge_list = adj_to_edgelist(dc_discrete_edge_array, directed = TRUE, selfedges = TRUE)
+  dc_discrete_edge_list = adj_to_edgelist(dc_discrete_edge_array, directed = TRUE, selfEdges = TRUE)
   dc_discrete_sbmt = sbmt(dc_discrete_edge_list, maxComms = 2, degreeCorrect = 3, directed = TRUE, klPerNetwork = 10)
   plot(dc_discrete_sbmt)
   dc_ari[s] = adj.rand.index(dc_discrete_sbmt$FoundComms[order(as.numeric(names(dc_discrete_sbmt$FoundComms)))], roles_discrete)
@@ -159,7 +159,7 @@ library(ppsbm)
 # no degree correction case. their model works as expected ----
 # Use the "hist" method because agrees more closely with out discrete time slices and requires little data manipulation
 
-Nijk = sapply(adj_to_edgelist(discrete_edge_array, directed = TRUE, selfedges = FALSE, remove_zeros = TRUE), "[[", 3); dim(Nijk)
+Nijk = sapply(adj_to_edgelist(discrete_edge_array, directed = TRUE, selfEdges = FALSE, remove_zeros = TRUE), "[[", 3); dim(Nijk)
 discrete_ppsbm = mainVEM(list(Nijk=Nijk,Time=Time), N, Qmin = 1, Qmax = 4, directed=TRUE, 
                          method='hist', d_part=0, n_perturb=0, n_random=0)
 
