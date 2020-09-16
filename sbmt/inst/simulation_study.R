@@ -1,6 +1,5 @@
 # TO DO
-# add generate_multilayer_array and dgelist as function to package 
-# to enable simulation and complement edgelist_to_adj
+# add generate_multilayer_array to package to facilitate simulation?
 # Note degree correcton can also lead to a more parsimonious and interpretable model representation where there is degree heterogeneity
 # because a unique class is not needed for each degree-activity leve
 # ---------------------------------------------------------------------------------------------------------------
@@ -12,7 +11,7 @@
 # (add this as a simulation function to abmt package?)
 generate_multilayer_array <- function(N, Time, roles, omega, dc_factors = rep(1, N), type = "discrete") {
   # checks
-  if (type == "discrete") {
+  if (type == "discrete" & !identical(dc_factors, rep(1, N))) {
    if (! identical(aggregate(dc_factors ~ roles, FUN = "sum")[,2], rep(1, length(unique(roles))))) {
      warning("degree correction factors not normalized to sum 1 by group")
    }
@@ -34,6 +33,7 @@ generate_multilayer_array <- function(N, Time, roles, omega, dc_factors = rep(1,
 }
 
 # libraries ----
+# devtools::install_github("jcarlen/sbm", subdir = "sbmt") 
 library(sbmt)
 library(fossil) #for adj rand index
 
@@ -75,7 +75,10 @@ omega = array(rbind(omega_11, omega_21, omega_12, omega_22), dim = c(n_roles, n_
 
 # for degree corrected ----
 
+
 dc_factor = seq(0,1,length.out = n_roles+1)[-1]
+#dc_factor = seq(0,1,length.out = n_roles+2)[-1]
+
 dc_factors = rep(dc_factor, each = round(N/n_roles))[1:N]
 #apply sum to 1 constraint
 f.tmp = function(v) {v/sum(v)}
@@ -124,8 +127,9 @@ for (s in 1:N_sim) {
 # role detection
 sbmt_ari
 
-#omega
-
+# omega detection
+plot(discrete_sbmt)
+# overall curve distances?
 
 # ---------------------------------------------------------------------------------------------------------------
 # degree correction case  ----
@@ -149,73 +153,69 @@ for (s in 1:N_sim) {
 # role detection
 dc_ari
 
-# omega 
+# omega detection
 plot(dc_discrete_sbmt)
+# overall curve distances?
 
 # ---------------------------------------------------------------------------------------------------------------
 # ppsbm ----
 library(ppsbm)
 
 # no degree correction case. their model works as expected ----
+# - fit ppsbm ----
+
 # Use the "hist" method because agrees more closely with out discrete time slices and requires little data manipulation
 
-Nijk = sapply(adj_to_edgelist(discrete_edge_array, directed = TRUE, selfEdges = FALSE, remove_zeros = TRUE), "[[", 3); dim(Nijk)
+Nijk = sapply(adj_to_edgelist(discrete_edge_array, directed = TRUE, selfEdges = FALSE, removeZeros = FALSE), "[[", 3); dim(Nijk)
 discrete_ppsbm = mainVEM(list(Nijk=Nijk,Time=Time), N, Qmin = 1, Qmax = 4, directed=TRUE, 
-                         method='hist', d_part=0, n_perturb=0, n_random=0)
+                         method='hist', d_part=5, n_perturb=10, n_random=0)
+
+# - results ----
 
 # number of blocks selected
 selected_Q = modelSelection_Q(list(Nijk=Nijk,Time=Time), N, Qmin = 1, Qmax = 4, directed = TRUE, sparse = FALSE, discrete_ppsbm)$Qbest
 selected_Q
 selected_Q == n_roles #should equal n_roles
+
+# role detection
+apply(discrete_ppsbm[[selected_Q]]$tau, 2, which.max)
+adj.rand.index(apply(discrete_ppsbm[[selected_Q]]$tau, 2, which.max), roles_discrete)
+
 # omegas
 par(mfrow = c(n_roles, n_roles))
 apply(exp(discrete_ppsbm[[selected_Q]]$logintensities.ql), 1, plot, type = "l")
-# role match?
-apply(discrete_ppsbm[[selected_Q]]$tau, 2, which.max)
-table(apply(discrete_ppsbm[[selected_Q]]$tau, 2, which.max), roles_discrete)
 
-# degree correction case ---
-dc_Nijk = sapply(adj_to_edgelist(dc_discrete_edge_array, directed = TRUE, selfEdge = FALSE), "[[", 3); dim(dc_Nijk)
+# degree correction case ----
+# - fit ppsbm ----
+
+dc_Nijk = sapply(adj_to_edgelist(dc_discrete_edge_array, directed = TRUE, selfEdges = FALSE, removeZeros = FALSE), "[[", 3); dim(dc_Nijk)
 dc_discrete_ppsbm = mainVEM(list(Nijk=dc_Nijk,Time=Time), N, Qmin = 1, Qmax = 4, directed=TRUE, 
-                            method='hist', d_part=0, n_perturb=0, n_random=0)
+                            method='hist', d_part=5, n_perturb=10, n_random=0)
+# - results ----
+
 # number of blocks selected
 selected_Q = modelSelection_Q(list(Nijk=dc_Nijk,Time=Time), N, Qmin = 1, Qmax = 4, directed = TRUE, sparse = FALSE, dc_discrete_ppsbm)$Qbest
 selected_Q
 selected_Q == n_roles
-# omegas
-par(mfrow = c(selected_Q, selected_Q))
-apply(exp(dc_discrete_ppsbm[[selected_Q]]$logintensities.ql), 1, plot, type = "l", col = "blue")
-# role match?
+
+# role detection
+
+# Wants a seperate class for each degree-correcton level
 apply(dc_discrete_ppsbm[[selected_Q]]$tau, 2, which.max)
-table(apply(dc_discrete_ppsbm[[selected_Q]]$tau, 2, which.max), roles_discrete)
-# with true number of groups?
-par(mfrow = c(n_roles, n_roles))
-apply(exp(dc_discrete_ppsbm[[n_roles]]$logintensities.ql), 1, plot, type = "l", col = "blue")
-apply(dc_discrete_ppsbm[[n_roles]]$tau, 2, which.max)
-table(apply(dc_discrete_ppsbm[[n_roles]]$tau, 2, which.max), roles_discrete)
+adj.rand.index(apply(dc_discrete_ppsbm[[selected_Q]]$tau, 2, which.max), roles_discrete)
 
-# try with 2 groups initializing with truth?  ----
-# with perfect initialization it can find it, but still doesn't understand degree heterogeneity
-# and still thinks three blocks are better with the higher and lower intensity versions of one of the blocks
-# with enough degree heterogeneity it may not recover 
-# *** (see if the bike example resolves this, otherwise consider adding a third low-activity group) ***
-discrete.init.tau = matrix(0, N, n_roles)
-discrete.init.tau[cbind(1:N, roles_discrete)] = 1; discrete.init.tau = t(discrete.init.tau)
-discrete.init.tau
-dc_discrete_ppsbm_init = mainVEM(list(Nijk=dc_Nijk,Time=Time), N, Qmin = 1, Qmax = 3, directed=TRUE, 
-                            method='hist', d_part=0, n_perturb=0, n_random=0, 
-                            init.tau = list(matrix(1, nrow = N), discrete.init.tau, rbind(discrete.init.tau, 0)))
-
-# number of blocks selected
-selected_Q = modelSelection_Q(list(Nijk=dc_Nijk,Time=Time), N, Qmin = 1, Qmax = 3, directed = TRUE, sparse = FALSE, dc_discrete_ppsbm_init)$Qbest
-selected_Q
 # omegas
-par(mfrow = c(selected_Q, selected_Q))
-apply(exp(dc_discrete_ppsbm_init[[selected_Q]]$logintensities.ql), 1, plot, type = "l", col = "blue")
-# role match?
-apply(dc_discrete_ppsbm_init[[selected_Q]]$tau, 2, which.max)
-table(apply(dc_discrete_ppsbm_init[[selected_Q]]$tau, 2, which.max), roles_discrete)
+par(mfrow = c(selected_Q, selected_Q)); par(mai = rep(.5, 4))
+apply(exp(dc_discrete_ppsbm[[selected_Q]]$logintensities.ql), 1, plot, type = "l", col = "blue")
 
+# with true number of groups? gets it right
+apply(dc_discrete_ppsbm[[n_roles]]$tau, 2, which.max)
+adj.rand.index(apply(dc_discrete_ppsbm[[n_roles]]$tau, 2, which.max), roles_discrete)
+s
+par(mfrow = c(n_roles, n_roles)); par(mai = rep(.5, 4))
+apply(exp(dc_discrete_ppsbm[[n_roles]]$logintensities.ql), 1, plot, type = "l", col = "blue")
+
+# Bike example shows how degree correction ib model -> group statins with similar behavior across activity levels
 # ---------------------------------------------------------------------------------------------------------------
 # mixed-membership example ----
 
