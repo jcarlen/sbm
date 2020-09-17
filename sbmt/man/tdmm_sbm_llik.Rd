@@ -2,7 +2,7 @@
 % Please edit documentation in R/td_sbm_llik.R
 \name{tdmm_sbm_llik}
 \alias{tdmm_sbm_llik}
-\title{Calculate un-normalized log-likelihood for a TDMM-SBM (time-dependent mixed-membership stochastic block model)}
+\title{Calculate un-normalized log-likelihood for a TDMM-SBM.}
 \usage{
 tdmm_sbm_llik(A, C, omega, directed = TRUE, selfEdges = TRUE)
 }
@@ -25,5 +25,4 @@ Calculate un-normalized log-likelihood for a TDMM-SBM (time-dependent mixed-memb
 data("la_byhour_edgelist", "la_mixed_roles_2", "la_mixed_omega_2")
 A = edgelist_to_adj(la_byhour_edgelist, as.array = TRUE)
 tdmm_sbm_llik(A, la_mixed_roles_2, la_mixed_omega_2)
-
 }

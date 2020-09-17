@@ -2,7 +2,7 @@
 % Please edit documentation in R/td_sbm_llik.R
 \name{tdd_n_param}
 \alias{tdd_n_param}
-\title{Calculate number of parameters for discrete model}
+\title{Calculate number of parameters for tdd-sbm}
 \usage{
 tdd_n_param(N, K, Time, directed = TRUE)
 }
@@ -16,5 +16,5 @@ tdd_n_param(N, K, Time, directed = TRUE)
 \item{directed}{Is the network directed?}
 }
 \description{
-Calculate number of parameters for discrete model
+Calculate number of parameters for tdd-sbm
 }

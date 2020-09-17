@@ -2,8 +2,7 @@
 % Please edit documentation in R/td_sbm_llik.R
 \name{edgelist_to_adj}
 \alias{edgelist_to_adj}
-\title{Convert a multilayer edgelist to a multilayer adjacency matrix (as a list of adjacency matrices or N x N x T array depending on the `as.array` parameter). 
-Used in pre-processing for likelihood functions.}
+\title{Convert a multilayer edgelist to a multilayer adjacency matrix.}
 \usage{
 edgelist_to_adj(
   edgelist.time,

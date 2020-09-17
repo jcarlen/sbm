@@ -2,8 +2,7 @@
 % Please edit documentation in R/td_sbm_llik.R
 \name{td_sbm_llik_t}
 \alias{td_sbm_llik_t}
-\title{Calculate the un-normalized log-likelihood for a single network slice given mu as input (works for discrete or continuous). Helper for tdd_sbm_llik and tdmm_sbm_llik
-#}
+\title{Calculate the un-normalized td-sbm log-likelihood for a single network slice.}
 \usage{
 td_sbm_llik_t(A_t, mu, directed = TRUE, selfEdges = TRUE)
 }
@@ -17,6 +16,5 @@ td_sbm_llik_t(A_t, mu, directed = TRUE, selfEdges = TRUE)
 \item{selfEdges}{is whether to sum over self-edge indices in the likelihood calculation, or exclude them}
 }
 \description{
-Calculate the un-normalized log-likelihood for a single network slice given mu as input (works for discrete or continuous). Helper for tdd_sbm_llik and tdmm_sbm_llik
-#
+Calculate the un-normalized td-sbm log-likelihood for a single network slice given mu as input (works for discrete or continuous). Helper for tdd_sbm_llik and tdmm_sbm_llik
 }

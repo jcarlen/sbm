@@ -51,6 +51,8 @@ edgelist_to_adj <- function(edgelist.time, selfEdges = TRUE, as.array = TRUE, di
   
 }
 
+#' Convert a multilayer adjacenty matrix to a multilayer edgelist 
+#' @description 
 #' Convert representation of time-sliced network as N x N x T array to a length-T list of edglists for each time period. (Handle NA?)
 #' Resulting edgelists have three columns, "from", "to", and "count" (which is more generally the edge weight).
 #' @param A is a (time) series of network data represented as a N x N x Time array (each slice represented as an adjacency matrix).
@@ -72,8 +74,9 @@ adj_to_edgelist <- function(A, directed = FALSE, selfEdges = TRUE, removeZeros =
   return(discrete_edge_list)
 }
 
-#' Calculate the un-normalized log-likelihood for a single network slice given mu as input (works for discrete or continuous). Helper for tdd_sbm_llik and tdmm_sbm_llik
-#' #
+#' Calculate the un-normalized td-sbm log-likelihood for a single network slice.
+#' @description 
+#' Calculate the un-normalized td-sbm log-likelihood for a single network slice given mu as input (works for discrete or continuous). Helper for tdd_sbm_llik and tdmm_sbm_llik
 #' @param A_t is a single-time network, represented as a N x N adjacency matrix
 #' @param mu mu is a N x N matrix of edge expected values at this time slice
 #' @param directed Are the edges in the edgelist directed?
@@ -95,7 +98,7 @@ td_sbm_llik_t <- function(A_t, mu, directed = TRUE, selfEdges = TRUE) {
   return(term1 - term2)
 }
 
-#' Calculate number of parameters for discrete model
+#' Calculate number of parameters for tdd-sbm
 #
 #' @param N number of nodes
 #' @param K number of blocks
@@ -106,7 +109,7 @@ tdd_n_param <- function(N, K, Time, directed = TRUE) {
   ifelse(directed, 2*N - K + Time*K^2, 2*N - K + Time*(K*(K-1)/2))
 }
 
-#' Calculate number of parameters for mixed model
+#' Calculate number of parameters for tdmm-sbm
 #
 #' @param N number of nodes
 #' @param K number of blocks
@@ -119,10 +122,10 @@ tdmm_n_param <- function(N, K, Time, directed = TRUE) {
 
 # ---------------------------------- Functions (discrete membership TDD-SBM) -----------------------------------------
 
+#' Calculate un-normalized log-likelihood for a TDD-SBM
+#' @description 
 #' Calculate un-normalized log-likelihood for a TDD-SBM (time-dependent discrete-membership stochastic block model).
 #' This is not the same as the "highest score" returned by sbmt, which is unnormalized in a different way
-#' 
-#
 #' @param A (time) series of network data represented  as N x N x Time array.
 #' @param roles is a length-N list of estimated block assignment for each node
 #' @param omega is a Time x K x K array describing block-to-block traffic at each time period or Time-length list of K x K matrices.
@@ -163,8 +166,8 @@ tdd_sbm_llik <- function(A, roles, omega, directed = TRUE, selfEdges = TRUE) {
 
 # ------------------------------- Functions (mixed-membership TDMM-SBM) ----------------------------------------------
 
-#' Calculate un-normalized log-likelihood for a TDMM-SBM (time-dependent mixed-membership stochastic block model)
-#
+#' Calculate un-normalized log-likelihood for a TDMM-SBM.
+#' @description Calculate un-normalized log-likelihood for a TDMM-SBM (time-dependent mixed-membership stochastic block model)
 #' @param A is a A (time) series of network data represented  as N x N x Time array.
 #' @param C is a N x K matrix of mixed group membership whose columns sum to 1
 #' @param omega is a Time x K x K array describing block-to-block traffic at each time period or Time-length list of K x K matrices.

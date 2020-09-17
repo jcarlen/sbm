@@ -2,7 +2,7 @@
 % Please edit documentation in R/td_sbm_llik.R
 \name{tdmm_n_param}
 \alias{tdmm_n_param}
-\title{Calculate number of parameters for mixed model}
+\title{Calculate number of parameters for tdmm-sbm}
 \usage{
 tdmm_n_param(N, K, Time, directed = TRUE)
 }
@@ -16,5 +16,5 @@ tdmm_n_param(N, K, Time, directed = TRUE)
 \item{directed}{Is the network directed?}
 }
 \description{
-Calculate number of parameters for mixed model
+Calculate number of parameters for tdmm-sbm
 }
