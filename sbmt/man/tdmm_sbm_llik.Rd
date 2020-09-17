@@ -18,6 +18,9 @@ tdmm_sbm_llik(A, C, omega, directed = TRUE, selfEdges = TRUE)
 \item{selfEdges}{is whether to sum over self-edge indices in the likelihood calculation, or exclude them}
 }
 \description{
+Calculate un-normalized log-likelihood for a TDMM-SBM.
+}
+\details{
 Calculate un-normalized log-likelihood for a TDMM-SBM (time-dependent mixed-membership stochastic block model)
 }
 \examples{
