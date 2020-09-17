@@ -2,7 +2,7 @@
 % Please edit documentation in R/td_sbm_llik.R
 \name{tdmm_sbm_llik}
 \alias{tdmm_sbm_llik}
-\title{Calculate un-normalized log-likelihood for a TDMM-SBM.}
+\title{Calculate un-normalized log-likelihood for a TDMM-SBM (time-dependent mixed-membership stochastic block model)}
 \usage{
 tdmm_sbm_llik(A, C, omega, directed = TRUE, selfEdges = TRUE)
 }
@@ -18,9 +18,6 @@ tdmm_sbm_llik(A, C, omega, directed = TRUE, selfEdges = TRUE)
 \item{selfEdges}{is whether to sum over self-edge indices in the likelihood calculation, or exclude them}
 }
 \description{
-Calculate un-normalized log-likelihood for a TDMM-SBM.
-}
-\details{
 Calculate un-normalized log-likelihood for a TDMM-SBM (time-dependent mixed-membership stochastic block model)
 }
 \examples{

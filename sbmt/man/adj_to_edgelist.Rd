@@ -2,7 +2,7 @@
 % Please edit documentation in R/td_sbm_llik.R
 \name{adj_to_edgelist}
 \alias{adj_to_edgelist}
-\title{Convert a multilayer adjacenty matrix to a multilayer edgelist}
+\title{Convert a multilayer adjacenty matrix to a multilayer edgelist '}
 \usage{
 adj_to_edgelist(A, directed = FALSE, selfEdges = TRUE, removeZeros = TRUE)
 }
@@ -16,9 +16,6 @@ adj_to_edgelist(A, directed = FALSE, selfEdges = TRUE, removeZeros = TRUE)
 \item{removeZeros}{Probably want to remove zeros for efficiency, but maybe not if edgelist-length consistency over time is desired}
 }
 \description{
-Convert a multilayer adjacenty matrix to a multilayer edgelist
-}
-\details{
 Convert representation of time-sliced network as N x N x T array to a length-T list of edglists for each time period. (Handle NA?)
 Resulting edgelists have three columns, "from", "to", and "count" (which is more generally the edge weight).
 }
