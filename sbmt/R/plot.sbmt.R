@@ -16,7 +16,7 @@ plot.sbmt <- function(x, mai = rep(.5,4), show_blocks = list(1:nrow(x$EdgeMatrix
   par(mai = mai)
   for (i in show_blocks[[1]]) {
     for (j in show_blocks[[2]]) {
-        plot(plot_data_out[i,seq(j, G*n_slices, by = G)],  type = "l", xlab = "", ylab = "", main = paste0(i,"->",j))
+        plot(plot_data_out[i,seq(j, G*n_slices, by = G)],  type = "l", xlab = "", ylab = "", main = paste0(i-1,"->",j-1))
         if (i != j & show_reverse) {
           points(plot_data_out[j, seq(i,G*n_slices, by = G)], type = "l", lty = 2, col = "grey")
         }
