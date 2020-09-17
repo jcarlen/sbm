@@ -52,7 +52,7 @@ edgelist_to_adj <- function(edgelist.time, selfEdges = TRUE, as.array = TRUE, di
   
 }
 
-#' Convert a multilayer adjacenty matrix to a multilayer edgelist '
+#' Convert a multilayer adjacenty matrix to a multilayer edgelist.
 #' 
 #' Convert representation of time-sliced network as N x N x T array to a length-T list of edglists for each time period. (Handle NA?)
 #' Resulting edgelists have three columns, "from", "to", and "count" (which is more generally the edge weight).
