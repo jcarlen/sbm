@@ -156,17 +156,19 @@ test_that("tdd_sbm_llik - likelihood for discrete model", {
 # from initialization to final (note reported InitialScore gives varying levels of accuracy)
 
 test_that("Likelihood accounting, T = 1", {
+  
+  # Fit model without initialization
   A = edgelist_to_adj(list(zach), directed = TRUE)
-  model1 = sbmt(list(zach), directed= TRUE, degreeCorrect = 3, klPerNetwork = 1, seed = 1)
-  init =  rep_len(c(0,1), length(model1$FoundComms)); names(init) = names(model1$FoundComms)
+  init =  rep_len(c(0,1), dim(A)[1]); names(init) = as.character(1:dim(A)[1])
   
   tmp = data.frame(zach, g1 = init[as.character(zach[,1])], g2 = init[as.character(zach[,2])])
   init.EdgeMatrix = matrix(aggregate(rep(1, nrow(tmp)), by = list(tmp$g1,tmp$g2), sum)$x, nrow = 2, ncol = 2)
   
-  model.init = sbmt(list(zach), directed = TRUE, degreeCorrect = 3, klPerNetwork = 1, seedComms = init, seed = 1)
+  # Fit model with initialization and note InitialScore
+  model.init = sbmt(list(zach), directed = TRUE, degreeCorrect = 3, klPerNetwork = 5, seedComms = init, seed = 3)
   
-  #These should be approximately equal:
-  x1 = model.init$HighestScore - (-447.463) #InitialScore
+  #These should be approximately equal (Highest score - initial score should equal llik at end minus start):
+  x1 = model.init$HighestScore - (-443.123) #InitialScore for model.init
   x2 = tdd_sbm_llik(A, model.init$FoundComms, model.init$EdgeMatrix, directed = TRUE) - tdd_sbm_llik(A, init, init.EdgeMatrix, directed = TRUE)
   expect_true(abs(x1 - x2) < .001)
 })

@@ -2,7 +2,7 @@
 % Please edit documentation in R/td_sbm_llik.R
 \name{adj_to_edgelist}
 \alias{adj_to_edgelist}
-\title{Convert a multilayer adjacenty matrix to a multilayer edgelist '}
+\title{Convert a multilayer adjacenty matrix to a multilayer edgelist.}
 \usage{
 adj_to_edgelist(A, directed = FALSE, selfEdges = TRUE, removeZeros = TRUE)
 }

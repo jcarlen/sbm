@@ -131,8 +131,8 @@ tdmm_n_param <- function(N, K, Time, directed = TRUE) {
 #' This is not the same as the "highest score" returned by sbmt, which is unnormalized in a different way
 #' 
 #' @param A (time) series of network data represented  as N x N x Time array.
-#' @param roles is a length-N list of estimated block assignment for each node
-#' @param omega is a Time x K x K array describing block-to-block traffic at each time period or Time-length list of K x K matrices.
+#' @param roles is a length-N list of estimated block assignment for each node. If not 0-indexed will substract min value so roles are 0,1,2,...
+#' @param omega is a Time x K x K array describing block-to-block traffic at each time period OR Time-length list of K x K matrices.
 #' @param directed Is the network directed?
 #' @param selfEdges is whether to sum over self-edge indices in the likelihood calculation, or exclude them
 #' @examples
@@ -144,10 +144,21 @@ tdmm_n_param <- function(N, K, Time, directed = TRUE) {
 
 tdd_sbm_llik <- function(A, roles, omega, directed = TRUE, selfEdges = TRUE) {
   
+  # arg checks
+  if (min(roles)!=0) {
+    warning("roles should be 0-indexed. Will re-index to min 0 (subtract min value).")
+    roles = roles - min(roles)
+    cat("new roles:", roles, "\n")
+  }
+  if (length(intersect(class(omega), c("list", "array")))==0) {stop("omega should be a Time x K x K array or Time-length list of K x K matrices")}
+  
   N = dim(A)[1]
   Time = dim(A)[3]
-  K = length(unique(roles))
-  
+  K = ifelse("list" %in% class(omega), nrow(omega[[1]]), dim(omega)[1])
+
+  # add node names 1:N if none
+  if(is.null(names(roles))) {roles = setNames(roles, 1:N)} 
+     
   omega = array(unlist(omega), dim = c(K,K,Time)) #make array if not already
   roles = roles[rownames(A)] # put into same order as A if not already
   

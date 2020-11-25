@@ -75,10 +75,16 @@ sbm <- function(edgelist, maxComms = 2, degreeCorrect = F, directed = FALSE,
     
     # check seedComms if given, reformat if necessary
     if (!is.null(seedComms)) {
-      if (length(seedComms) != N | length(unique(seedComms)) > maxComms) {
-        stop("seedComms should have length == #nodes and unique values shouldn't exceed maxComms")
+      # check number of seed blocks
+      if (length(unique(seedComms)) > maxComms) {
+        stop("unique values of seedComms shouldn't exceed maxComms") 
       }
-      
+      # to avoid confusions, seedComms, if given, should have names matching the node names (as characters). they will be ordered accordingly.
+      if (!identical(sort(names(seedComms)), sort(levels(edgelist1)))) {
+        stop("to avoid confusion, seedComms should have names equal to node set (as characters)")
+      } else { #sort accordingly
+        seedComms = seedComms[order(names(seedComms))]
+      }
       # if not integer format, convert to cpp appropriate (0,1,2,...) style
       if (!is.integer(seedComms)) {
         seedComms = as.numeric(as.factor(seedComms))-1
@@ -106,6 +112,8 @@ sbm <- function(edgelist, maxComms = 2, degreeCorrect = F, directed = FALSE,
     tmp.levels = as.numeric(levels(Results$FoundComms))+1
     Results$FoundComms = as.numeric(as.character(Results$FoundComms))
     names(Results$FoundComms) = names(link.nodes) # Return found community membership in order of ID
+    # reorder FoundComms by ids if they're numeric (otherwise stays character/alphabetical sorted)
+    if (sum(is.na((as.numeric(names(Results$FoundComms)))))==0) {Results$FoundComms = Results$FoundComms[order(as.numeric(names(Results$FoundComms)))]}
     
     Results$EdgeMatrix = matrix(Results$EdgeMatrix, maxComms, maxComms, byrow = T)
     Results$EdgeMatrix = Results$EdgeMatrix[order(tmp.levels), order(tmp.levels)] #align with re-leveled blocks
@@ -116,7 +124,7 @@ sbm <- function(edgelist, maxComms = 2, degreeCorrect = F, directed = FALSE,
     Results$klPerNetwork = klPerNetwork
     Results$tolerance = tolerance
     Results$init = list(seed = seed, seedComms = seedComms)
-    
+
     Results
 }
 

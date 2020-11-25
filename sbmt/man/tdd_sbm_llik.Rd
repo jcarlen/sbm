@@ -9,9 +9,9 @@ tdd_sbm_llik(A, roles, omega, directed = TRUE, selfEdges = TRUE)
 \arguments{
 \item{A}{(time) series of network data represented  as N x N x Time array.}
 
-\item{roles}{is a length-N list of estimated block assignment for each node}
+\item{roles}{is a length-N list of estimated block assignment for each node. If not 0-indexed will substract min value so roles are 0,1,2,...}
 
-\item{omega}{is a Time x K x K array describing block-to-block traffic at each time period or Time-length list of K x K matrices.}
+\item{omega}{is a Time x K x K array describing block-to-block traffic at each time period OR Time-length list of K x K matrices.}
 
 \item{directed}{Is the network directed?}
 

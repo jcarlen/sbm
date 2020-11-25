@@ -38,7 +38,8 @@ Assumes all edgelist slices have the same names and number of columns. The first
 
 \item{seed}{a random seet set for reproducibility.}
 
-\item{seedComms}{user-supplied starting values for KL runs. They will be converted to integer levels numbered starting at 0.}
+\item{seedComms}{user-supplied starting values for KL runs. They will be converted to integer levels numbered starting at 0.
+To avoid confusion, they must have names equal to the unique nodes in the network. E.g., If nodes are numbered numerically from 1 then seedComm names are "1", "2",...}
 }
 \value{
 FoundComms A vector of node labels with estimated block assignments.

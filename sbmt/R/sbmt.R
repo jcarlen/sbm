@@ -29,6 +29,7 @@
 #'@param tolerance stopping criteria for KL. Prevents loops due to numerical errors.
 #'@param seed a random seet set for reproducibility.
 #'@param seedComms user-supplied starting values for KL runs. They will be converted to integer levels numbered starting at 0.
+#'To avoid confusion, they must have names equal to the unique nodes in the network. E.g., If nodes are numbered numerically from 1 then seedComm names are "1", "2",... 
 #
 #'@return FoundComms A vector of node labels with estimated block assignments.
 #'@return EdgeMatrix time-specific block-to-block edges corresponding to FoundComms
@@ -93,6 +94,7 @@ sbmt <- function(edgelist.time, maxComms = 2, degreeCorrect = 0, directed = F,
     if (!is.logical(directed)) {
         stop("directed should be FALSE or TRUE (0 or 1 OK)")
     }
+    
     degreeCorrect = as.integer(degreeCorrect) #to handle T/F input
     if (is.na(degreeCorrect)) stop("degreeCorrect should be a logical or an integer in the specific range, with 0 for no degree correction")
     if (degreeCorrect == 3 & directed == FALSE) {degreeCorrect = 2} #Degree Correct three used when graph is directed to induce non-directed degree correction.
@@ -102,10 +104,16 @@ sbmt <- function(edgelist.time, maxComms = 2, degreeCorrect = 0, directed = F,
 
     # check seedComms if given, reformat if necessary
     if (!is.null(seedComms)) {
-      if (length(seedComms) != N | length(unique(seedComms)) > maxComms) {
-        stop("seedComms should have length == #nodes and unique values shouldn't exceed maxComms")
+      # check number of seed blocks
+      if (length(unique(seedComms)) > maxComms) {
+        stop("unique values of seedComms shouldn't exceed maxComms") 
       }
-      
+      # to avoid confusions, seedComms, if given, should have names matching the node names (as characters). they will be ordered accordingly.
+      if (!identical(sort(names(seedComms)), sort(nodes))) {
+        stop("to avoid confusion, seedComms should have names equal to node set (as characters)")
+      } else { #sort accordingly
+        seedComms = seedComms[order(names(seedComms))]
+      }
       # if not integer format, convert to cpp appropriate (0,1,2,...) style
       if (!is.integer(seedComms)) {
         seedComms = as.numeric(as.factor(seedComms))-1
@@ -117,15 +125,13 @@ sbmt <- function(edgelist.time, maxComms = 2, degreeCorrect = 0, directed = F,
       } 
       # check cpp range (0,1,2,...)
       if (max(seedComms) > (maxComms - 1))  stop("seedComm range exceeds maxComms")
-    } else 
-    {
+    } else {
       seedComms = 0
     }
       
     # MAKE THE CALL
     Results <- sbmtFit(edgelist.time, maxComms, directed, klPerNetwork, degreeCorrect, N, tolerance, seedComms)
 
-    
     # reformat best matrices
     Time = length(edgelist.time)
     
@@ -134,9 +140,10 @@ sbmt <- function(edgelist.time, maxComms = 2, degreeCorrect = 0, directed = F,
     levels(Results$FoundComms) = levels(Results$FoundComms)[rank(sapply(0:(maxComms-1), function(x) {which(Results$FoundComms==x)[1]}))]
     tmp.levels = as.numeric(levels(Results$FoundComms))+1
     Results$FoundComms = as.numeric(as.character(Results$FoundComms))
-    
-    # return found community membership in order of ID
+    # return found community membership with ID as name
     names(Results$FoundComms) = names(link.nodes)
+    # reorder FoundComms by ids if they're numeric (otherwise stays character/alphabetical sorted)
+    if (sum(is.na((as.numeric(names(Results$FoundComms)))))==0) {Results$FoundComms = Results$FoundComms[order(as.numeric(names(Results$FoundComms)))]}
     
     # reformed edge matrices
     Results$EdgeMatrix= sapply(1:Time, function(x) {
