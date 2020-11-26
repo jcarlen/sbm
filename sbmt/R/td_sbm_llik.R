@@ -133,6 +133,13 @@ tdmm_n_param <- function(N, K, Time, directed = TRUE) {
 #' @param A (time) series of network data represented  as N x N x Time array.
 #' @param roles is a length-N list of estimated block assignment for each node. If not 0-indexed will substract min value so roles are 0,1,2,...
 #' @param omega is a Time x K x K array describing block-to-block traffic at each time period OR Time-length list of K x K matrices.
+#' @param degreeCorrect degree correction type:
+#' \itemize{
+#'   \item 0 = no degree correction
+#'   \item 1 = the degree correction of Karrer and Newman at every time step - inherits directedness of graph
+#'   \item 2 = time-independent degree correction over time-dependent data - inherits directedness of graph
+#'   \item 3 = time-independent degree correction over time-dependent data - undirected regardless
+#'}
 #' @param directed Is the network directed?
 #' @param selfEdges is whether to sum over self-edge indices in the likelihood calculation, or exclude them
 #' @examples
@@ -142,7 +149,7 @@ tdmm_n_param <- function(N, K, Time, directed = TRUE) {
 #'   directed = TRUE, klPerNetwork = 2, maxComms = 3)
 #' tdd_sbm_llik(A, model1$FoundComms, model1$EdgeMatrix)
 
-tdd_sbm_llik <- function(A, roles, omega, directed = TRUE, selfEdges = TRUE) {
+tdd_sbm_llik <- function(A, roles, omega, degreeCorrect = 3, directed = TRUE, selfEdges = TRUE) {
   
   # arg checks
   if (min(roles)!=0) {
@@ -151,6 +158,8 @@ tdd_sbm_llik <- function(A, roles, omega, directed = TRUE, selfEdges = TRUE) {
     cat("new roles:", roles, "\n")
   }
   if (length(intersect(class(omega), c("list", "array")))==0) {stop("omega should be a Time x K x K array or Time-length list of K x K matrices")}
+  if (degreeCorrect %in% c(1,2)) {stop("tdd_sbm_llik not yet implement for degree correction types 1 or 2")}
+  
   
   N = dim(A)[1]
   Time = dim(A)[3]
@@ -167,15 +176,23 @@ tdd_sbm_llik <- function(A, roles, omega, directed = TRUE, selfEdges = TRUE) {
   
   #may need to catch more cases her, e.g. factor roles 
   role_degree = data.frame(id = names(roles), role = roles + 1, degree_total = degree_total[names(roles)])
-  role_degree$role_sum = aggregate(role_degree$degree_total, by = list(role_degree$role), sum)$x[role_degree$role]
-  theta = role_degree$degree_total/role_degree$role_sum
-  
+ 
+  if (degreeCorrect == 3) { #undirected time-independent degree correction
+    role_degree$role_sum = aggregate(role_degree$degree_total, by = list(role_degree$role), sum)$x[role_degree$role]
+    role_degree$frac = 1/table(roles)[role_degree$role]
+    theta = role_degree$degree_total/role_degree$role_sum
+  } 
+  if (degreeCorrect == 0) { 
+    theta = 1/table(roles)[role_degree$role]  #undirected time-independent degree correction
+  }
+
   lik = sum(
           sapply(1:Time, function(t) {
             mu_t = diag(theta) %*% matrix( (omega[,,t])[as.matrix(expand.grid(role_degree$role, role_degree$role))], N, N) %*% diag(theta)
             td_sbm_llik_t(A[,,t], mu_t, directed, selfEdges)
           })
         ) 
+  
   return(lik)
 }
 

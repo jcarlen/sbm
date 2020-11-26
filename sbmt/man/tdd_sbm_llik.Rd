@@ -4,7 +4,14 @@
 \alias{tdd_sbm_llik}
 \title{Calculate un-normalized log-likelihood for a TDD-SBM}
 \usage{
-tdd_sbm_llik(A, roles, omega, directed = TRUE, selfEdges = TRUE)
+tdd_sbm_llik(
+  A,
+  roles,
+  omega,
+  degreeCorrect = 3,
+  directed = TRUE,
+  selfEdges = TRUE
+)
 }
 \arguments{
 \item{A}{(time) series of network data represented  as N x N x Time array.}
@@ -12,6 +19,14 @@ tdd_sbm_llik(A, roles, omega, directed = TRUE, selfEdges = TRUE)
 \item{roles}{is a length-N list of estimated block assignment for each node. If not 0-indexed will substract min value so roles are 0,1,2,...}
 
 \item{omega}{is a Time x K x K array describing block-to-block traffic at each time period OR Time-length list of K x K matrices.}
+
+\item{degreeCorrect}{degree correction type:
+\itemize{
+  \item 0 = no degree correction
+  \item 1 = the degree correction of Karrer and Newman at every time step - inherits directedness of graph
+  \item 2 = time-independent degree correction over time-dependent data - inherits directedness of graph
+  \item 3 = time-independent degree correction over time-dependent data - undirected regardless
+}}
 
 \item{directed}{Is the network directed?}
 
