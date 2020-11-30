@@ -153,9 +153,11 @@ tdd_sbm_llik <- function(A, roles, omega, degreeCorrect = 3, directed = TRUE, se
   
   # arg checks
   if (min(roles)!=0) {
-    warning("roles should be 0-indexed. Will re-index to min 0 (subtract min value).")
     roles = roles - min(roles)
-    cat("new roles:", roles, "\n")
+    warning(
+      paste("roles should be 0-indexed. Re-indexed to min 0 (by subtracting min value).\n new roles: ", paste(roles, collapse = " "), "\n")
+    )
+  
   }
   if (length(intersect(class(omega), c("list", "array")))==0) {stop("omega should be a Time x K x K array or Time-length list of K x K matrices")}
   if (degreeCorrect %in% c(1,2)) {stop("tdd_sbm_llik not yet implement for degree correction types 1 or 2")}
