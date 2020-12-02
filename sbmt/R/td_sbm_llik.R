@@ -221,6 +221,7 @@ tdmm_sbm_llik <- function(A, C, omega, directed = TRUE, selfEdges = TRUE) {
   Time = dim(A)[3]
   K = ncol(C)
   # add node names 1:N if none
+  if(is.null(rownames(A))) {rownames(A) = 1:N} 
   if(is.null(rownames(C))) {rownames(C) = 1:N} 
   
   if ( !identical(sort(rownames(C)), sort(rownames(A))) ) {stop("A and C should have matching rownames")}
