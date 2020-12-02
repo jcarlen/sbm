@@ -9,9 +9,10 @@ tdmm_sbm_llik(A, C, omega, directed = TRUE, selfEdges = TRUE)
 \arguments{
 \item{A}{is a A (time) series of network data represented  as N x N x Time array.}
 
-\item{C}{is a N x K matrix of mixed group membership whose columns sum to 1}
+\item{C}{is a N x K matrix of mixed group membership whose columns sum to 1. If no rownames (indicating corresponding nodes) they will be assigned 1:N.}
 
-\item{omega}{is a Time x K x K array describing block-to-block traffic at each time period or Time-length list of K x K matrices.}
+\item{omega}{is a K x K x Time array describing block-to-block traffic at each time period, or Time-length list of K x K matrices, or a K^2 x Time array.
+All types will be internally convereted to a Time x K x K array}
 
 \item{directed}{Is the network directed?}
 
