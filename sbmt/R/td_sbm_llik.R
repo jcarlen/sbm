@@ -203,8 +203,9 @@ tdd_sbm_llik <- function(A, roles, omega, degreeCorrect = 3, directed = TRUE, se
 #' Calculate un-normalized log-likelihood for a TDMM-SBM (time-dependent mixed-membership stochastic block model)
 #
 #' @param A is a A (time) series of network data represented  as N x N x Time array.
-#' @param C is a N x K matrix of mixed group membership whose columns sum to 1
-#' @param omega is a Time x K x K array describing block-to-block traffic at each time period or Time-length list of K x K matrices.
+#' @param C is a N x K matrix of mixed group membership whose columns sum to 1. If no rownames (indicating corresponding nodes) they will be assigned 1:N.
+#' @param omega is a K x K x Time array describing block-to-block traffic at each time period, or Time-length list of K x K matrices, or a K^2 x Time array.
+#' All types will be internally convereted to a Time x K x K array 
 #' @param directed Is the network directed?
 #' @param selfEdges is whether to sum over self-edge indices in the likelihood calculation, or exclude them
 #' @examples
@@ -215,12 +216,23 @@ tdd_sbm_llik <- function(A, roles, omega, degreeCorrect = 3, directed = TRUE, se
 
 tdmm_sbm_llik <- function(A, C, omega, directed = TRUE, selfEdges = TRUE) {
   
+  
   N = dim(A)[1]
   Time = dim(A)[3]
   K = ncol(C)
+  # add node names 1:N if none
+  if(is.null(rownames(C))) {rownames(C) = 1:N} 
+  
   if ( !identical(sort(rownames(C)), sort(rownames(A))) ) {stop("A and C should have matching rownames")}
   C = as.matrix(C[rownames(A),])
-  omega = array(unlist(omega), dim = c(K,K,Time)) #time period starts as a row, ends up as [,,t]
+  
+  #check omega
+  if (! (  identical(as.numeric(dim(omega)), as.numeric(c(K, K, Time))) | 
+           identical(as.numeric(dim(omega)), as.numeric(c(K^2, Time))) | 
+           (length(omega) ==Time && identical( as.numeric(dim(omega[[1]])), as.numeric(c(K,K)))) ) ) {
+    warning("omega should be a K x K x Time array, K^2 x Time array, or Time-length list of K x K matrices")
+  }
+  omega = array(unlist(omega), dim = c(K,K,Time))
   
   lik = sum(
     sapply(1:Time, function(t) {
