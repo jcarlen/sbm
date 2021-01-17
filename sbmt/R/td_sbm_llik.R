@@ -173,16 +173,14 @@ tdd_sbm_llik <- function(A, roles, omega, degreeCorrect = 3, directed = TRUE, se
   omega = array(unlist(omega), dim = c(K,K,Time)) #make array if not already
   roles = roles[rownames(A)] # put into same order as A if not already
   
-  A_total = apply(A, c(1,2), sum)
-  degree_total = colSums(A_total) + rowSums(A_total)
+  node_degree = apply(A, 1, sum) + apply(A, 2, sum)
   
   #may need to catch more cases her, e.g. factor roles 
-  role_degree = data.frame(id = names(roles), role = roles + 1, degree_total = degree_total[names(roles)])
+  role_degree = data.frame(id = names(roles), role = roles + 1, node_degree = node_degree[names(roles)])
  
   if (degreeCorrect == 3) { #undirected time-independent degree correction
-    role_degree$role_sum = aggregate(role_degree$degree_total, by = list(role_degree$role), sum)$x[role_degree$role]
-    role_degree$frac = 1/table(roles)[role_degree$role]
-    theta = role_degree$degree_total/role_degree$role_sum
+    role_degree$role_sum = aggregate(role_degree$node_degree, by = list(role_degree$role), sum)$x[role_degree$role]
+    theta = role_degree$node_degree/role_degree$role_sum
   } 
   if (degreeCorrect == 0) { 
     theta = 1/table(roles)[role_degree$role]  #undirected time-independent degree correction
