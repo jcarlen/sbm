@@ -151,7 +151,41 @@ sbmt <- function(edgelist.time, maxComms = 2, degreeCorrect = 0, directed = F,
     }, simplify = F,  USE.NAMES = F)
     Results$EdgeMatrix = lapply(Results$EdgeMatrix, function(x) {x[order(tmp.levels), order(tmp.levels)]}) #align with re-leveled blocks
     
+    # results theta (degree correction parameters)
+    if (degreeCorrect == 0 ) {
+      theta = NULL
+    }
+    if (degreeCorrect == 1 ) {
+      theta = "not yet implemented"
+    }
+    if (degreeCorrect == 2) {
+      if (directed) {
+        theta = 
+      }
+
+      if (!directed) {
+        theta = 
+      }
+    }
+    if (degreeCorrect == 3) {
+      node_degrees = aggregate(do.call("rbind", EdgeMatrix)
+        
+    }
+    
+    # A_total = apply(A, c(1,2), sum)
+    # degree_total = colSums(A_total) + rowSums(A_total)
+    # 
+    # #may need to catch more cases her, e.g. factor roles 
+    # role_degree = data.frame(id = names(roles), role = roles + 1, degree_total = degree_total[names(roles)])
+    # 
+    # if (degreeCorrect == 3) { #undirected time-independent degree correction
+    #   role_degree$role_sum = aggregate(role_degree$degree_total, by = list(role_degree$role), sum)$x[role_degree$role]
+    #   role_degree$frac = 1/table(roles)[role_degree$role]
+    #   theta = role_degree$degree_total/role_degree$role_sum
+    # } 
+    
     Results$llik = ifelse(degreeCorrect == 3, tdd_sbm_llik(A.time, roles = Results$FoundComms, omega = Results$EdgeMatrix, directed = directed), "llik currently only implemented for degreeCorrect = 3" )
+    Results$degreeCorrectParams = theta
     Results$degreeCorrect = degreeCorrect
     Results$directed = directed
     Results$klPerNetwork = klPerNetwork
