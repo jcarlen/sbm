@@ -46,7 +46,8 @@ FoundComms A vector of node labels with estimated block assignments.
 
 EdgeMatrix time-specific block-to-block edges corresponding to FoundComms
 
-HighestScore Highest score found by algorithm runs
+theta nodal degree correction parameters. NA if degreeCorrect == 0; not yet implemented for degreeCorrect == 1; 
+N x 2 data frame (one column for each direction) if network is directed and degreeCorrect == 2; and a length-N numeric vector otherwise.
 
 llik unnormalized log-likelihood of result as calculated by tdd_sbm_llik
 

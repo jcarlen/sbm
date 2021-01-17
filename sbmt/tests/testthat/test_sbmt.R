@@ -12,7 +12,7 @@ test_that("sbmt on uncorrected, weighted, time-dependent network", {
     )
     
     expect_equal(
-        9,
+        10,
         length( sbmt(la_byhour_edgelist,  degreeCorrect = F, directed = T, klPerNetwork = 5, maxComms = 2, seed = 1))
     )
 })
@@ -21,12 +21,12 @@ test_that("sbmt on time-slice corrected, weighted, time-dependent network", {
     
     #undirected and directed - degree correction level 1
     expect_equal(
-        9,
+        10,
         length(sbmt(la_byhour_edgelist,  degreeCorrect = 1, directed = F, klPerNetwork = 5, maxComms = 2))
     )
     
     expect_equal(
-        9,
+        10,
         length(sbmt(la_byhour_edgelist,  degreeCorrect = T, directed = T, klPerNetwork = 5, maxComms = 2))
     )
 })
@@ -35,12 +35,12 @@ test_that("sbmt on time-independent corrected, directed, weighted, time-dependen
     
     #undirected and directed - degree correction level 2
     expect_equal(
-    9,
+    10,
     length(sbmt(la_byhour_edgelist,  degreeCorrect = 2, directed = T, klPerNetwork = 5, maxComms = 2))
     )
     
     expect_equal(
-    9,
+    10,
     length(sbmt(la_byhour_edgelist,  degreeCorrect = 3, directed = T, klPerNetwork = 5, maxComms = 2))
     )
 

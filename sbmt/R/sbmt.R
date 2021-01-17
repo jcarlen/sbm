@@ -33,7 +33,8 @@
 #
 #'@return FoundComms A vector of node labels with estimated block assignments.
 #'@return EdgeMatrix time-specific block-to-block edges corresponding to FoundComms
-#'@return HighestScore Highest score found by algorithm runs
+#'@return theta nodal degree correction parameters. NA if degreeCorrect == 0; not yet implemented for degreeCorrect == 1; 
+#'N x 2 data frame (one column for each direction) if network is directed and degreeCorrect == 2; and a length-N numeric vector otherwise.
 #'@return llik unnormalized log-likelihood of result as calculated by tdd_sbm_llik
 #'@return directed Whether input network was considered directed
 #'@return degreeCorrect type of degreeCorrection used in fitting
@@ -45,19 +46,20 @@
 sbmt <- function(edgelist.time, maxComms = 2, degreeCorrect = 0, directed = F,
                  klPerNetwork = 50, tolerance = 1e-4, seed = NULL, seedComms = NULL) {
     
-    # check it's the right type of data/list format
+    # check it's the right type of data/list format ----
     if (!is.list(edgelist.time) | is.null(edgelist.time[[1]])) {
         stop("edgelist.time should be a list where each entry is an edgelist of at least two columns, three if weights are supplied")
     }
         
-    # extract unique nodes and re-level them to 1:N
+    # extract unique nodes and re-level them to 1:N ----
     nodes = sort(unique(as.character(unlist(sapply(1:length(edgelist.time), function(x) {unlist(edgelist.time[[x]][,1:2])})))))
     N = length(nodes)
     link.nodes = 0:(N-1); names(link.nodes) = nodes
     ncol.min = min(sapply(edgelist.time, ncol))
+    # reformulate input ----
     A.time = edgelist_to_adj(edgelist.time, directed = directed) # store array from original
     edgelist.time = lapply(edgelist.time, function(edgelist) {
-            # Argument Checks
+            # Argument Checks ----
             if (is.null(dim(edgelist)) || ncol(edgelist) < 2) {
                 stop("edgelist must have at least two columns, three if weights are supplied")
             }
@@ -97,12 +99,9 @@ sbmt <- function(edgelist.time, maxComms = 2, degreeCorrect = 0, directed = F,
     
     degreeCorrect = as.integer(degreeCorrect) #to handle T/F input
     if (is.na(degreeCorrect)) stop("degreeCorrect should be a logical or an integer in the specific range, with 0 for no degree correction")
-    if (degreeCorrect == 3 & directed == FALSE) {degreeCorrect = 2} #Degree Correct three used when graph is directed to induce non-directed degree correction.
-    
-    # set seed
-    if (!is.null(seed)) set.seed(seed)
+    if (degreeCorrect == 3 & directed == FALSE) {degreeCorrect = 2} #Degree correct three only applied to directed graphs, otherwise graph and degree correction are undirected --> degree correct == 2 case.
 
-    # check seedComms if given, reformat if necessary
+    # check seedComms if given, reformat if necessary ----
     if (!is.null(seedComms)) {
       # check number of seed blocks
       if (length(unique(seedComms)) > maxComms) {
@@ -128,64 +127,69 @@ sbmt <- function(edgelist.time, maxComms = 2, degreeCorrect = 0, directed = F,
     } else {
       seedComms = 0
     }
-      
-    # MAKE THE CALL
+    
+    # set seed ----
+    if (!is.null(seed)) set.seed(seed)
+    
+    # MAKE THE CALL ----
     Results <- sbmtFit(edgelist.time, maxComms, directed, klPerNetwork, degreeCorrect, N, tolerance, seedComms)
 
+    # reformulate output ----
+    
     # reformat best matrices
     Time = length(edgelist.time)
     
+    #   Results$FoundComms ----
     # re-level blocks in order of appearance so that label switching doesn't affect output
     Results$FoundComms = as.factor(Results$FoundComms)
     levels(Results$FoundComms) = levels(Results$FoundComms)[rank(sapply(0:(maxComms-1), function(x) {which(Results$FoundComms==x)[1]}))]
     tmp.levels = as.numeric(levels(Results$FoundComms))+1
     Results$FoundComms = as.numeric(as.character(Results$FoundComms))
+    
     # return found community membership with ID as name
     names(Results$FoundComms) = names(link.nodes)
+    
     # reorder FoundComms by ids if they're numeric (otherwise stays character/alphabetical sorted)
     if (sum(is.na((as.numeric(names(Results$FoundComms)))))==0) {Results$FoundComms = Results$FoundComms[order(as.numeric(names(Results$FoundComms)))]}
     
+    #   Results$EdgeMatrix ----
     # reformed edge matrices
     Results$EdgeMatrix= sapply(1:Time, function(x) {
       matrix(Results$EdgeMatrix[ (maxComms^2 * (x-1) + 1) : (maxComms^2 * x) ], nrow = maxComms, ncol = maxComms, byrow = T)
     }, simplify = F,  USE.NAMES = F)
     Results$EdgeMatrix = lapply(Results$EdgeMatrix, function(x) {x[order(tmp.levels), order(tmp.levels)]}) #align with re-leveled blocks
-    
-    # results theta (degree correction parameters)
+    #   Results$theta ----
+    # extract theta (degree correction parameters)
     if (degreeCorrect == 0 ) {
-      theta = NULL
+      Results$theta = NA
     }
     if (degreeCorrect == 1 ) {
-      theta = "not yet implemented"
+      Results$theta = "theta not yet implemented"
     }
-    if (degreeCorrect == 2) {
-      if (directed) {
-        theta = 
-      }
-
-      if (!directed) {
-        theta = 
-      }
+    # directed degree correction parameters
+    if (degreeCorrect == 2 & directed) {
+      node_in_degree = apply(A.time, 2, sum)
+      node_out_degree = apply(A.time, 1, sum)
+      role_in_sum = aggregate(node_in_degree, by = list(Results$FoundComms), sum)$x[Results$FoundComms + 1]
+      role_out_sum = aggregate(node_out_degree, by = list(Results$FoundComms), sum)$x[Results$FoundComms + 1]
+      Results$theta = cbind(theta_in = node_in_degree/role_in_sum, theta_out = node_out_degree/role_out_sum)
     }
-    if (degreeCorrect == 3) {
-      node_degrees = aggregate(do.call("rbind", EdgeMatrix)
-        
+    # undirected degree correction parameters
+    if (degreeCorrect == 3  | degreeCorrect == 2 & !directed) {
+        if (!directed) {
+          node_degree = (apply(A.time, 1, sum) + apply(A.time, 2, sum))/2
+        }
+        if (directed) {
+          node_degree = apply(A.time, 1, sum) + apply(A.time, 2, sum)
+        }
+        node_degree = node_degree[names(Results$FoundComms)] #reorder to agree with Results$FoundComms
+        role_sum = aggregate(node_degree, by = list(Results$FoundComms), sum)$x[Results$FoundComms + 1]
+        Results$theta = node_degree/role_sum
+        # check: aggregate(theta, by = list(Results$FoundComms), sum)
     }
     
-    # A_total = apply(A, c(1,2), sum)
-    # degree_total = colSums(A_total) + rowSums(A_total)
-    # 
-    # #may need to catch more cases her, e.g. factor roles 
-    # role_degree = data.frame(id = names(roles), role = roles + 1, degree_total = degree_total[names(roles)])
-    # 
-    # if (degreeCorrect == 3) { #undirected time-independent degree correction
-    #   role_degree$role_sum = aggregate(role_degree$degree_total, by = list(role_degree$role), sum)$x[role_degree$role]
-    #   role_degree$frac = 1/table(roles)[role_degree$role]
-    #   theta = role_degree$degree_total/role_degree$role_sum
-    # } 
-    
+    #   Results$ all other stuff ----
     Results$llik = ifelse(degreeCorrect == 3, tdd_sbm_llik(A.time, roles = Results$FoundComms, omega = Results$EdgeMatrix, directed = directed), "llik currently only implemented for degreeCorrect = 3" )
-    Results$degreeCorrectParams = theta
     Results$degreeCorrect = degreeCorrect
     Results$directed = directed
     Results$klPerNetwork = klPerNetwork
