@@ -2,7 +2,7 @@
 % Please edit documentation in R/sbm.R
 \name{sbm}
 \alias{sbm}
-\title{Estimate parameters of a static SBM by Kernighan-Lin algorithm. Allows for directed networks and degree correction.}
+\title{Estimate parameters of a static SBM}
 \usage{
 sbm(
   edgelist,

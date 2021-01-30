@@ -2,8 +2,7 @@
 % Please edit documentation in R/sbmt.R
 \name{sbmt}
 \alias{sbmt}
-\title{Estimate parameters of the TDD-SBM (time-dependent discrete stochastic block model) by Kernighan-Lin algorithm.
-Note that although the motivation for this function and package is analyzing time-sliced networks, it can handle multilayer networks more generally as long as the primary input is a list of networks in edgelist format. (Slice parameters are independent given block membership.)}
+\title{Estimate parameters of the TDD-SBM}
 \usage{
 sbmt(
   edgelist.time,
