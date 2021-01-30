@@ -191,7 +191,7 @@ sbmt <- function(edgelist.time, maxComms = 2, degreeCorrect = 0, directed = F,
     }
     
     #   Results$ all other stuff ----
-    Results$llik = ifelse(degreeCorrect == 3, tdd_sbm_llik(A.time, roles = Results$FoundComms, omega = Results$EdgeMatrix, directed = directed), "llik currently only implemented for degreeCorrect = 3" )
+    Results$llik = ifelse(degreeCorrect == 3, tdd_sbm_llik(A.time, roles = Results$FoundComms, omega = Results$EdgeMatrix, directed = directed), "llik currently only implemented for degreeCorrect = 3, directed networks" )
     Results$degreeCorrect = degreeCorrect
     Results$directed = directed
     Results$klPerNetwork = klPerNetwork
